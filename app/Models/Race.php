@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 
@@ -19,13 +20,39 @@ class Race extends Model
     protected function casts(): array
     {
         return [
-            'distances'       => 'array',
             'is_active'       => 'boolean',
             'race_date'       => 'date',
             'reg_start'       => 'date',
             'reg_end'         => 'date',
             'ai_race_summary' => 'array',
         ];
+    }
+
+    // ─── Accessors / Mutators ─────────────────────────────────
+
+    protected function distances(): Attribute
+    {
+        return Attribute::make(
+            get: function ($value) {
+                if (is_array($value)) return $value;
+                if (is_null($value) || $value === '') return null;
+
+                // JSON format: ["풀","하프","10K","5K"]
+                $decoded = json_decode($value, true);
+                if (is_array($decoded)) return $decoded;
+
+                // PostgreSQL text[] format: {"풀","하프","10K","5K"}
+                if (str_starts_with($value, '{') && str_ends_with($value, '}')) {
+                    $inner = substr($value, 1, -1);
+                    return $inner !== '' ? str_getcsv($inner, ',', '"') : [];
+                }
+
+                return null;
+            },
+            set: fn ($value) => is_array($value)
+                ? json_encode($value, JSON_UNESCAPED_UNICODE)
+                : $value,
+        );
     }
 
     // ─── Scopes ───────────────────────────────────────────────
