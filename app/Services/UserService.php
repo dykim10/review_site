@@ -3,20 +3,29 @@
 namespace App\Services;
 
 use App\Models\User;
+use App\Services\CryptoService;
 use Illuminate\Auth\Events\Registered;
 
 class UserService
 {
+    public function __construct(private CryptoService $crypto) {}
+
     /**
      * 회원가입 — 생성 + Registered 이벤트 발행 (이메일 인증 메일 트리거)
      */
     public function register(array $validated): User
     {
+        $email = $validated['email'];
+        $name  = $validated['name'];
+
         $user = User::create([
-            'name'     => $validated['name'],
-            'email'    => $validated['email'],
-            'password' => $validated['password'], // User 모델 cast('hashed')가 자동 해싱
-            'role'     => 'member',
+            'name'       => $name,
+            'email'      => $email,
+            'email_hash' => $this->crypto->hashEmail($email),
+            'email_enc'  => $this->crypto->encrypt($email),
+            'name_enc'   => $this->crypto->encrypt($name),
+            'password'   => $validated['password'], // User 모델 cast('hashed')가 자동 해싱
+            'role'       => 'member',
         ]);
 
         event(new Registered($user));
@@ -31,9 +40,15 @@ class UserService
     {
         $user->fill($validated);
 
-        // 이메일이 바뀌면 재인증 필요
+        // 이메일이 바뀌면 재인증 + 암호화 컬럼 갱신
         if ($user->isDirty('email')) {
             $user->email_verified_at = null;
+            $user->email_hash = $this->crypto->hashEmail($user->email);
+            $user->email_enc  = $this->crypto->encrypt($user->email);
+        }
+
+        if ($user->isDirty('name')) {
+            $user->name_enc = $this->crypto->encrypt($user->name);
         }
 
         $user->save();
