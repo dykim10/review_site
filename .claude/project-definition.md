@@ -111,11 +111,23 @@ member      → 일반 구성원
 ## 개발 우선순위 (v1)
 
 ```
-1. Laravel 기본 설치 및 Supabase 연결
-2. 회원 인증 (이메일 인증)
-3. 대회 정보 등록 / 조회
-4. 리뷰 작성 / 목록
-5. AI 요약 연동 (CORE API 호출)
+1. Laravel 기본 설치 및 Supabase 연결  ✅
+2. 회원 인증 (이메일 인증)              ✅
+3. 대회 정보 등록 / 조회               ✅
+4. 리뷰 작성 / 목록 (1인 1리뷰)        ✅
+5. AI 요약 연동 (CORE API 호출)        ✅
+```
+
+## v1 완료 기능 상세 (2026-05-17 기준)
+
+```
+- 관리자 권한 미들웨어 (AdminMiddleware)
+- 대회 크롤링 연동 (marathongo / roadrun)
+- distances 필드 PostgreSQL text[] / JSONB 양쪽 파싱 (Attribute accessor)
+- AI 개별 리뷰 요약 + 감성분석 (positive/negative/neutral)
+- AI 대회 종합 분석 (summary / positives / negatives / keywords)
+- races.ai_race_summary (JSONB) — 리뷰 등록·수정·삭제 시 자동 재생성
+- reviews.ai_summary / reviews.sentiment 컬럼 추가
 ```
 
 ---
