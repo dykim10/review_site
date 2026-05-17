@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
-use Illuminate\Support\Facades\Hash;
 
 class UserService
 {
@@ -16,7 +15,7 @@ class UserService
         $user = User::create([
             'name'     => $validated['name'],
             'email'    => $validated['email'],
-            'password' => Hash::make($validated['password']),
+            'password' => $validated['password'], // User 모델 cast('hashed')가 자동 해싱
             'role'     => 'member',
         ]);
 

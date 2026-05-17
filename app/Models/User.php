@@ -12,7 +12,6 @@ class User extends Authenticatable implements MustVerifyEmail
     use HasFactory, Notifiable;
 
     protected $table = 'users';
-    protected $schema = 'public';
 
     protected $fillable = [
         'name',
