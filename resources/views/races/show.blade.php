@@ -52,6 +52,7 @@
         </div>
 
         @auth
+            @if(auth()->user()->role === 'super_admin' || auth()->user()->role === 'crew_admin')
             <div class="mt-4 flex gap-2">
                 <a href="{{ route('admin.races.edit', $race) }}" class="text-sm text-blue-600 hover:underline">수정</a>
                 <form method="POST" action="{{ route('admin.races.destroy', $race) }}" onsubmit="return confirm('삭제하시겠습니까?')">
@@ -59,7 +60,77 @@
                     <button type="submit" class="text-sm text-red-500 hover:underline">삭제</button>
                 </form>
             </div>
+            @endif
         @endauth
+
+        {{-- 리뷰 섹션 --}}
+        <div class="mt-8">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-xl font-bold">
+                    참가 후기
+                    @if($avgRating)
+                        <span class="text-yellow-500 text-base font-normal ml-2">★ {{ $avgRating }}</span>
+                    @endif
+                    <span class="text-gray-400 text-base font-normal">({{ $reviews->total() }}건)</span>
+                </h2>
+
+                @auth
+                    @if(!$alreadyReviewed)
+                        <a href="{{ route('reviews.create', $race) }}"
+                           class="bg-blue-600 text-white text-sm px-4 py-2 rounded hover:bg-blue-700">
+                            리뷰 작성
+                        </a>
+                    @else
+                        <span class="text-sm text-gray-400">이미 리뷰를 작성하셨습니다.</span>
+                    @endif
+                @else
+                    <a href="{{ route('login') }}" class="text-sm text-blue-600 hover:underline">로그인 후 리뷰 작성</a>
+                @endauth
+            </div>
+
+            @if(session('success'))
+                <div class="mb-4 p-3 bg-green-100 text-green-700 rounded text-sm">{{ session('success') }}</div>
+            @endif
+            @if(session('error'))
+                <div class="mb-4 p-3 bg-red-100 text-red-700 rounded text-sm">{{ session('error') }}</div>
+            @endif
+
+            @forelse($reviews as $review)
+                <div class="bg-white rounded-lg shadow p-5 mb-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center gap-3">
+                            <span class="font-medium text-gray-800">{{ $review->user->name }}</span>
+                            <span class="text-xs text-gray-400">{{ $review->created_at->format('Y.m.d') }}</span>
+                            <span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">{{ $review->distance }}</span>
+                        </div>
+                        <span class="text-yellow-500">{{ str_repeat('★', $review->rating) }}{{ str_repeat('☆', 5 - $review->rating) }}</span>
+                    </div>
+
+                    <p class="text-sm text-gray-700 whitespace-pre-line">{{ $review->content }}</p>
+
+                    @auth
+                        @if($review->user_id === auth()->id())
+                            <div class="mt-3 flex gap-3">
+                                <a href="{{ route('reviews.edit', $review) }}" class="text-xs text-blue-600 hover:underline">수정</a>
+                                <form method="POST" action="{{ route('reviews.destroy', $review) }}"
+                                      onsubmit="return confirm('리뷰를 삭제하시겠습니까?')">
+                                    @csrf @method('DELETE')
+                                    <button type="submit" class="text-xs text-red-500 hover:underline">삭제</button>
+                                </form>
+                            </div>
+                        @endif
+                    @endauth
+                </div>
+            @empty
+                <div class="bg-white rounded-lg shadow p-8 text-center text-gray-400 text-sm">
+                    아직 등록된 리뷰가 없습니다. 첫 번째 리뷰를 작성해보세요!
+                </div>
+            @endforelse
+
+            <div class="mt-4">
+                {{ $reviews->links() }}
+            </div>
+        </div>
     </div>
 </body>
 </html>
