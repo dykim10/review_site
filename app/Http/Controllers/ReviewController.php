@@ -35,6 +35,7 @@ class ReviewController extends Controller
 
         $review = $this->reviewService->create($request->validated(), $request->user(), $race);
         $this->summaryService->summarize($review, $race);
+        $this->summaryService->summarizeRace($race);
 
         return redirect()->route('races.show', $race)
             ->with('success', '리뷰가 등록되었습니다.');
@@ -50,6 +51,10 @@ class ReviewController extends Controller
     {
         $this->authorizeReview($review);
         $this->reviewService->update($review, $request->validated());
+        $race = Race::find($review->race_id);
+        if ($race) {
+            $this->summaryService->summarizeRace($race);
+        }
 
         return redirect()->route('races.show', $review->race_id)
             ->with('success', '리뷰가 수정되었습니다.');
@@ -58,10 +63,13 @@ class ReviewController extends Controller
     public function destroy(Review $review): RedirectResponse
     {
         $this->authorizeReview($review);
-        $raceId = $review->race_id;
+        $race = Race::find($review->race_id);
         $this->reviewService->delete($review);
+        if ($race) {
+            $this->summaryService->summarizeRace($race);
+        }
 
-        return redirect()->route('races.show', $raceId)
+        return redirect()->route('races.show', $review->race_id)
             ->with('success', '리뷰가 삭제되었습니다.');
     }
 

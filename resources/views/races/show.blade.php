@@ -63,6 +63,52 @@
             @endif
         @endauth
 
+        {{-- AI 종합 요약 섹션 --}}
+        @if($race->ai_race_summary)
+            @php $aiSummary = $race->ai_race_summary; @endphp
+            <div class="mt-8 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6">
+                <div class="flex items-center gap-2 mb-3">
+                    <span class="text-lg">🤖</span>
+                    <h2 class="text-base font-bold text-blue-800">AI 참가 후기 종합 분석</h2>
+                    <span class="text-xs text-blue-400 ml-auto">최근 {{ $reviews->total() }}건 기반</span>
+                </div>
+
+                <p class="text-sm text-gray-700 leading-relaxed mb-4">{{ $aiSummary['summary'] ?? '' }}</p>
+
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    @if(!empty($aiSummary['positives']))
+                        <div class="bg-white rounded-lg p-3 border border-green-100">
+                            <p class="text-xs font-semibold text-green-600 mb-2">👍 참가자들이 좋아한 점</p>
+                            <ul class="space-y-1">
+                                @foreach($aiSummary['positives'] as $point)
+                                    <li class="text-xs text-gray-700">· {{ $point }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
+
+                    @if(!empty($aiSummary['negatives']))
+                        <div class="bg-white rounded-lg p-3 border border-orange-100">
+                            <p class="text-xs font-semibold text-orange-500 mb-2">💬 아쉬웠던 점</p>
+                            <ul class="space-y-1">
+                                @foreach($aiSummary['negatives'] as $point)
+                                    <li class="text-xs text-gray-700">· {{ $point }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
+                </div>
+
+                @if(!empty($aiSummary['keywords']))
+                    <div class="mt-3 flex flex-wrap gap-2">
+                        @foreach($aiSummary['keywords'] as $keyword)
+                            <span class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full"># {{ $keyword }}</span>
+                        @endforeach
+                    </div>
+                @endif
+            </div>
+        @endif
+
         {{-- 리뷰 섹션 --}}
         <div class="mt-8">
             <div class="flex items-center justify-between mb-4">

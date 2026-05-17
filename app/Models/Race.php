@@ -13,16 +13,18 @@ class Race extends Model
         'name', 'race_date', 'race_time', 'location', 'city',
         'organizer', 'distances', 'entry_fee', 'website_url',
         'reg_start', 'reg_end', 'status', 'source', 'source_url', 'is_active',
+        'ai_race_summary',
     ];
 
     protected function casts(): array
     {
         return [
-            'distances' => 'array',
-            'is_active' => 'boolean',
-            'race_date' => 'date',
-            'reg_start' => 'date',
-            'reg_end'   => 'date',
+            'distances'       => 'array',
+            'is_active'       => 'boolean',
+            'race_date'       => 'date',
+            'reg_start'       => 'date',
+            'reg_end'         => 'date',
+            'ai_race_summary' => 'array',
         ];
     }
 
