@@ -6,11 +6,15 @@ use App\Http\Requests\StoreReviewRequest;
 use App\Models\Race;
 use App\Models\Review;
 use App\Services\ReviewService;
+use App\Services\SummaryService;
 use Illuminate\Http\RedirectResponse;
 
 class ReviewController extends Controller
 {
-    public function __construct(private ReviewService $reviewService) {}
+    public function __construct(
+        private ReviewService $reviewService,
+        private SummaryService $summaryService,
+    ) {}
 
     public function create(Race $race)
     {
@@ -29,7 +33,8 @@ class ReviewController extends Controller
                 ->with('error', '이미 이 대회에 리뷰를 작성하셨습니다.');
         }
 
-        $this->reviewService->create($request->validated(), $request->user(), $race);
+        $review = $this->reviewService->create($request->validated(), $request->user(), $race);
+        $this->summaryService->summarize($review, $race);
 
         return redirect()->route('races.show', $race)
             ->with('success', '리뷰가 등록되었습니다.');

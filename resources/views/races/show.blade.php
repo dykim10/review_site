@@ -108,6 +108,20 @@
 
                     <p class="text-sm text-gray-700 whitespace-pre-line">{{ $review->content }}</p>
 
+                    @if($review->ai_summary)
+                        <div class="mt-3 p-3 bg-blue-50 rounded text-xs text-blue-700 border border-blue-100">
+                            <span class="font-semibold">AI 요약</span>
+                            @if($review->sentiment === 'positive')
+                                <span class="ml-1 text-green-600">😊 긍정</span>
+                            @elseif($review->sentiment === 'negative')
+                                <span class="ml-1 text-red-500">😞 부정</span>
+                            @else
+                                <span class="ml-1 text-gray-500">😐 중립</span>
+                            @endif
+                            <p class="mt-1 leading-relaxed">{{ $review->ai_summary }}</p>
+                        </div>
+                    @endif
+
                     @auth
                         @if($review->user_id === auth()->id())
                             <div class="mt-3 flex gap-3">
