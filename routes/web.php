@@ -24,7 +24,7 @@ Route::get('/races', [RaceController::class, 'index'])->name('races.index');
 Route::get('/races/{race}', [RaceController::class, 'show'])->name('races.show');
 
 // 관리자 - 대회 CRUD
-Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified'])->group(function () {
+Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'admin'])->group(function () {
     Route::resource('races', AdminRaceController::class);
 });
 
