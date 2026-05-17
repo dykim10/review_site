@@ -50,7 +50,7 @@ REVIEW는 이 문제를 세 가지로 접근합니다.
 | 프레임워크 | Laravel 13 / FastAPI | |
 | DB | Supabase PostgreSQL | public + review 스키마 분리 |
 | 프론트 | Blade + Tailwind CSS + Alpine.js | |
-| AI | GPT-4o-mini | CORE API 경유 |
+| AI | GPT-4o-mini (현재) → Claude API (예정) | CORE API 경유 |
 | 서버 | AWS EC2 Ubuntu 24.04 + Nginx | |
 | 인증 | Laravel Breeze (이메일 인증) | |
 
@@ -201,4 +201,8 @@ php artisan config:cache && php artisan route:cache && php artisan view:cache
 | 프로젝트 | 역할 | GitHub |
 |---|---|---|
 | **CORE API** (Python) | AI 분석 / 크롤링 / 통계 | github.com/dykim10/python_core_api_site |
-| **CREW** (Laravel) | 크루 관리 / 러닝 기록 | — |
+| **CREW** (Laravel) | 크루 관리 / 러닝 기록 | github.com/dykim10/crew_site |
+
+---
+
+> 공통 정의서: `../project-definition.md`
