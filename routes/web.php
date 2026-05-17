@@ -1,0 +1,31 @@
+<?php
+
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\RaceController;
+use App\Http\Controllers\Admin\RaceController as AdminRaceController;
+use Illuminate\Support\Facades\Route;
+
+Route::get('/', function () {
+    return view('welcome');
+});
+
+Route::get('/dashboard', function () {
+    return view('dashboard');
+})->middleware(['auth', 'verified'])->name('dashboard');
+
+Route::middleware('auth')->group(function () {
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+});
+
+// 공개 - 대회 목록/상세
+Route::get('/races', [RaceController::class, 'index'])->name('races.index');
+Route::get('/races/{race}', [RaceController::class, 'show'])->name('races.show');
+
+// 관리자 - 대회 CRUD
+Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified'])->group(function () {
+    Route::resource('races', AdminRaceController::class);
+});
+
+require __DIR__.'/auth.php';
