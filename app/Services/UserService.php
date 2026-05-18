@@ -19,12 +19,10 @@ class UserService
         $name  = $validated['name'];
 
         $user = User::create([
-            'name'       => $name,
-            'email'      => $email,
             'email_hash' => $this->crypto->hashEmail($email),
             'email_enc'  => $this->crypto->encrypt($email),
             'name_enc'   => $this->crypto->encrypt($name),
-            'password'   => $validated['password'], // User 모델 cast('hashed')가 자동 해싱
+            'password'   => $validated['password'],
             'role'       => 'member',
         ]);
 
@@ -38,19 +36,20 @@ class UserService
      */
     public function updateProfile(User $user, array $validated): void
     {
-        $user->fill($validated);
+        $newEmail = $validated['email'] ?? null;
+        $newName  = $validated['name']  ?? null;
 
-        // 이메일이 바뀌면 재인증 + 암호화 컬럼 갱신
-        if ($user->isDirty('email')) {
+        if ($newEmail && $newEmail !== $user->email) {
             $user->email_verified_at = null;
-            $user->email_hash = $this->crypto->hashEmail($user->email);
-            $user->email_enc  = $this->crypto->encrypt($user->email);
+            $user->email_hash = $this->crypto->hashEmail($newEmail);
+            $user->email_enc  = $this->crypto->encrypt($newEmail);
         }
 
-        if ($user->isDirty('name')) {
-            $user->name_enc = $this->crypto->encrypt($user->name);
+        if ($newName && $newName !== $user->name) {
+            $user->name_enc = $this->crypto->encrypt($newName);
         }
 
+        $user->fill(array_diff_key($validated, array_flip(['email', 'name'])));
         $user->save();
     }
 

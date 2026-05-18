@@ -24,7 +24,15 @@ class RegisteredUserController extends Controller
     {
         $validated = $request->validate([
             'name'     => ['required', 'string', 'max:255'],
-            'email'    => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:' . User::class],
+            'email'    => [
+                'required', 'string', 'lowercase', 'email', 'max:255',
+                function (string $attribute, mixed $value, \Closure $fail) {
+                    $hash = hash('sha256', strtolower(trim($value)));
+                    if (User::where('email_hash', $hash)->exists()) {
+                        $fail('이미 등록된 이메일입니다.');
+                    }
+                },
+            ],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
