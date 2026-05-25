@@ -6,9 +6,7 @@ use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\Admin\RaceController as AdminRaceController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('welcome');
-});
+Route::get('/', [RaceController::class, 'index'])->name('home');
 
 Route::get('/dashboard', function () {
     return view('dashboard');

@@ -22,6 +22,14 @@ class RaceService
             ->paginate($perPage);
     }
 
+    /**
+     * 공개 대회 목록 + 리뷰 통계 (avg_rating, review_count 포함)
+     */
+    public function getPublicListWithStats(array $filters): \Illuminate\Support\Collection
+    {
+        return Race::listWithReviewStats($filters);
+    }
+
     // ─── 관리자용 ─────────────────────────────────────────────
 
     /**
