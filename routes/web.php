@@ -8,9 +8,10 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', [RaceController::class, 'index'])->name('home');
 
+// 이메일 인증은 회원가입 시에만 필요 — 로그인 후 재접속은 인증 불필요
 Route::get('/dashboard', function () {
     return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+})->middleware(['auth'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

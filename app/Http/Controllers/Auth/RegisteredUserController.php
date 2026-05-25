@@ -40,6 +40,12 @@ class RegisteredUserController extends Controller
 
         Auth::login($user);
 
-        return redirect(route('dashboard', absolute: false));
+        // 로컬 환경에서는 이메일 인증 자동 처리 (localhost / 127.0.0.1)
+        if (in_array($request->getHost(), ['localhost', '127.0.0.1'])) {
+            $user->markEmailAsVerified();
+            return redirect(route('dashboard', absolute: false));
+        }
+
+        return redirect(route('verification.notice'));
     }
 }

@@ -582,10 +582,10 @@
         <main class="main-content">
             <div class="main-bar">
                 <p class="main-count">
-                    총 <strong>{{ $races->count() }}</strong>개 대회
+                    총 <strong>{{ $races->total() }}</strong>개 대회
                 </p>
                 @auth
-                    @if(auth()->user()->is_admin ?? false)
+                    @if(in_array(auth()->user()->role ?? '', ['super_admin', 'region_admin']))
                         <a href="{{ route('admin.races.create') }}" class="add-btn">+ 대회 등록</a>
                     @endif
                 @endauth
@@ -668,12 +668,12 @@
                                                     <polygon class="star-fill" points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/>
                                                 @elseif($diff >= 0.4)
                                                     <defs>
-                                                        <linearGradient id="hg{{ $loop->parent->index }}-{{ $i }}" x1="0" x2="1" y1="0" y2="0">
+                                                        <linearGradient id="hg{{ $loop->index }}-{{ $i }}" x1="0" x2="1" y1="0" y2="0">
                                                             <stop offset="55%" stop-color="#FFB800"/>
                                                             <stop offset="55%" stop-color="#2C2C2C"/>
                                                         </linearGradient>
                                                     </defs>
-                                                    <polygon fill="url(#hg{{ $loop->parent->index }}-{{ $i }})" points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/>
+                                                    <polygon fill="url(#hg{{ $loop->index }}-{{ $i }})" points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/>
                                                 @else
                                                     <polygon class="star-empty-fill" points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/>
                                                 @endif
@@ -701,6 +701,12 @@
                     </div>
                 @endforelse
             </div>
+
+            @if($races->hasPages())
+                <div style="margin-top:2rem; display:flex; justify-content:center;">
+                    {{ $races->withQueryString()->links() }}
+                </div>
+            @endif
         </main>
     </div>
 

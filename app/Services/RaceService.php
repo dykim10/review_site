@@ -23,11 +23,11 @@ class RaceService
     }
 
     /**
-     * 공개 대회 목록 + 리뷰 통계 (avg_rating, review_count 포함)
+     * 공개 대회 목록 + 리뷰 통계 (avg_rating, review_count 포함, 페이지네이션)
      */
-    public function getPublicListWithStats(array $filters): \Illuminate\Support\Collection
+    public function getPublicListWithStats(array $filters, int $perPage = 20): \Illuminate\Pagination\LengthAwarePaginator
     {
-        return Race::listWithReviewStats($filters);
+        return Race::listWithReviewStats($filters, $perPage, request()->integer('page', 1));
     }
 
     // ─── 관리자용 ─────────────────────────────────────────────

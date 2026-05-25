@@ -80,33 +80,49 @@ class Race extends Model
     // ─── Static Methods (복잡한 쿼리) ─────────────────────────
 
     /**
-     * 대회 목록 + 리뷰 수 / 평균 평점 JOIN (raw query)
+     * 대회 목록 + 리뷰 수 / 평균 평점 JOIN (raw query, 페이지네이션)
      * 사용: 공개 대회 목록에서 리뷰 통계 함께 표시할 때
      */
-    public static function listWithReviewStats(array $filters = []): \Illuminate\Support\Collection
-    {
+    public static function listWithReviewStats(
+        array $filters = [],
+        int $perPage = 20,
+        int $page = 1,
+    ): \Illuminate\Pagination\LengthAwarePaginator {
         $city   = $filters['city']   ?? null;
         $status = $filters['status'] ?? null;
 
-        $sql = "
-            SELECT
-                r.*,
-                COUNT(rv.id)          AS review_count,
-                ROUND(AVG(rv.rating)::numeric, 1) AS avg_rating
-            FROM review.races r
-            LEFT JOIN review.reviews rv ON rv.race_id = r.id
-            WHERE r.is_active = true
-              AND r.race_date >= CURRENT_DATE
-              " . ($city   ? "AND r.city = :city"     : '') . "
-              " . ($status ? "AND r.status = :status" : '') . "
-            GROUP BY r.id
-            ORDER BY r.race_date ASC
-        ";
+        $where = "WHERE r.is_active = true AND r.race_date >= CURRENT_DATE"
+            . ($city   ? " AND r.city = :city"     : '')
+            . ($status ? " AND r.status = :status" : '');
 
         $bindings = [];
         if ($city)   $bindings['city']   = $city;
         if ($status) $bindings['status'] = $status;
 
-        return collect(DB::select($sql, $bindings));
+        $total = DB::selectOne(
+            "SELECT COUNT(*) AS cnt FROM review.races r $where",
+            $bindings
+        )->cnt;
+
+        $offset = ($page - 1) * $perPage;
+        $rows   = DB::select(
+            "SELECT r.*, COUNT(rv.id) AS review_count,
+                    ROUND(AVG(rv.rating)::numeric, 1) AS avg_rating
+             FROM review.races r
+             LEFT JOIN review.reviews rv ON rv.race_id = r.id
+             $where
+             GROUP BY r.id
+             ORDER BY r.race_date ASC
+             LIMIT :limit OFFSET :offset",
+            array_merge($bindings, ['limit' => $perPage, 'offset' => $offset])
+        );
+
+        return new \Illuminate\Pagination\LengthAwarePaginator(
+            collect($rows),
+            (int) $total,
+            $perPage,
+            $page,
+            ['path' => \Illuminate\Pagination\Paginator::resolveCurrentPath()]
+        );
     }
 }
