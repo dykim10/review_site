@@ -103,11 +103,31 @@ class ReviewService
         $disk  = $this->storageDisk();
         $paths = [];
         foreach ($files as $file) {
-            if ($file instanceof UploadedFile) {
+            if (!$file instanceof UploadedFile) continue;
+
+            $webp = $this->convertToWebp($file);
+            if ($webp !== null) {
+                $filename = 'reviews/' . uniqid('', true) . '.webp';
+                Storage::disk($disk)->put($filename, $webp);
+                $paths[] = $filename;
+            } else {
                 $paths[] = $file->store('reviews', $disk);
             }
         }
         return $paths;
+    }
+
+    private function convertToWebp(UploadedFile $file): ?string
+    {
+        $image = @imagecreatefromstring(file_get_contents($file->getRealPath()));
+        if (!$image) return null;
+
+        ob_start();
+        imagewebp($image, null, 82);
+        $content = ob_get_clean();
+        imagedestroy($image);
+
+        return $content ?: null;
     }
 
     private function deleteImageFiles(array $paths): void
