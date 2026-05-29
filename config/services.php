@@ -36,7 +36,7 @@ return [
     ],
 
     'core_api' => [
-        'url' => env('CORE_API_URL', 'http://localhost:8000'),
+        'url' => env('CORE_API_URL', 'http://localhost:8100'),
     ],
 
 ];
