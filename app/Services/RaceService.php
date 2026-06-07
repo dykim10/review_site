@@ -46,7 +46,12 @@ class RaceService
     public function create(array $validated, string $distancesRaw = ''): Race
     {
         $validated['distances'] = $this->parseDistances($distancesRaw);
-        return Race::create($validated);
+        $race = Race::create($validated);
+
+        // 장소명 → 기상청 지점코드 자동 추론 (CORE API)
+        app(WeatherService::class)->autoResolveStn($race);
+
+        return $race->fresh();
     }
 
     /**
@@ -55,7 +60,22 @@ class RaceService
     public function update(Race $race, array $validated, string $distancesRaw = ''): Race
     {
         $validated['distances'] = $this->parseDistances($distancesRaw);
+
+        // 장소/도시가 변경되면 지점코드 재추론 (수동 지정이 없는 경우)
+        $locationChanged = isset($validated['location']) && $validated['location'] !== $race->location
+            || isset($validated['city']) && $validated['city'] !== $race->city;
+
+        if ($locationChanged && !$race->weather_stn_id) {
+            $validated['weather_stn_id'] = null; // 재추론 트리거
+        }
+
         $race->update($validated);
+        $race->refresh();
+
+        if ($locationChanged) {
+            app(WeatherService::class)->autoResolveStn($race);
+        }
+
         return $race->fresh();
     }
 

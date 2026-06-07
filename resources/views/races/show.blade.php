@@ -562,6 +562,52 @@
     {{-- ── SIDEBAR ── --}}
     <aside class="sidebar">
 
+        {{-- Weather Card --}}
+        @php
+            $isFutureRace = $race->race_date->isFuture();
+        @endphp
+        <div class="s-card">
+            <div class="s-heading">대회일 날씨</div>
+            @if($isFutureRace)
+                <p style="font-size:0.78rem;color:var(--muted);text-align:center;padding:0.75rem 0;">
+                    🗓 대회 종료 후 표시됩니다
+                </p>
+            @elseif($weather)
+                <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.9rem;">
+                    <span style="font-size:2rem;line-height:1;">{{ \App\Services\WeatherService::conditionIcon($weather->weather_condition) }}</span>
+                    <div>
+                        <div style="font-size:1.3rem;font-weight:700;color:var(--text);line-height:1.1;">
+                            {{ $weather->temperature !== null ? number_format($weather->temperature, 1).'°C' : '-' }}
+                        </div>
+                        <div style="font-size:0.72rem;color:var(--muted);margin-top:0.15rem;">
+                            {{ $weather->weather_condition ?? '날씨 정보 없음' }}
+                        </div>
+                    </div>
+                </div>
+                <div class="s-row">
+                    <span class="s-key">습도</span>
+                    <span class="s-val">{{ $weather->humidity !== null ? number_format($weather->humidity, 0).'%' : '-' }}</span>
+                </div>
+                <div class="s-row">
+                    <span class="s-key">풍속</span>
+                    <span class="s-val">{{ $weather->wind_speed !== null ? number_format($weather->wind_speed, 1).' m/s' : '-' }}</span>
+                </div>
+                @if($weather->precipitation !== null && $weather->precipitation > 0)
+                    <div class="s-row">
+                        <span class="s-key">강수량</span>
+                        <span class="s-val">{{ number_format($weather->precipitation, 1) }} mm</span>
+                    </div>
+                @endif
+                <p style="font-size:0.65rem;color:var(--muted);margin-top:0.6rem;">
+                    기상청 ASOS · {{ $race->race_date->format('Y.m.d') }} 09:00 기준
+                </p>
+            @else
+                <p style="font-size:0.78rem;color:var(--muted);text-align:center;padding:0.75rem 0;">
+                    날씨 데이터를 불러올 수 없습니다
+                </p>
+            @endif
+        </div>
+
         {{-- Registration Info --}}
         <div class="s-card">
             <div class="s-heading">접수 정보</div>

@@ -24,7 +24,8 @@ class StoreRaceRequest extends FormRequest
             'website_url' => 'nullable|url|max:500',
             'reg_start'   => 'nullable|date',
             'reg_end'     => 'nullable|date|after_or_equal:reg_start',
-            'status'      => 'nullable|string|in:접수전,접수중,접수마감,대회종료',
+            'status'         => 'nullable|string|in:접수전,접수중,접수마감,대회종료',
+            'weather_stn_id' => 'nullable|integer|min:1',
         ];
     }
 

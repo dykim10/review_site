@@ -72,6 +72,15 @@
                     <label class="block text-sm font-medium mb-1">공식 홈페이지</label>
                     <input type="url" name="website_url" value="{{ old('website_url', $race->website_url) }}" class="w-full border rounded px-3 py-2 text-sm">
                 </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">기상청 지점코드
+                        <span class="text-gray-400 font-normal text-xs">(자동추론, 수동 보정 가능)</span>
+                    </label>
+                    <input type="number" name="weather_stn_id" value="{{ old('weather_stn_id', $race->weather_stn_id) }}"
+                           placeholder="예: 108 (서울), 112 (인천), 119 (수원)"
+                           class="w-full border rounded px-3 py-2 text-sm">
+                    <p class="text-xs text-gray-400 mt-1">비워두면 장소 기반 자동 추론 · 주요 코드: 서울 108 / 인천 112 / 수원 119 / 춘천 101 / 강릉 105 / 대전 133 / 광주 156 / 부산 159 / 제주 184</p>
+                </div>
             </div>
 
             <div class="flex justify-end gap-3 pt-2">

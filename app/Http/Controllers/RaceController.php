@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Race;
 use App\Services\RaceService;
 use App\Services\ReviewService;
+use App\Services\WeatherService;
 use Illuminate\Http\Request;
 
 class RaceController extends Controller
@@ -12,6 +13,7 @@ class RaceController extends Controller
     public function __construct(
         private RaceService $raceService,
         private ReviewService $reviewService,
+        private WeatherService $weatherService,
     ) {}
 
     public function index(Request $request)
@@ -28,6 +30,8 @@ class RaceController extends Controller
             ? $this->reviewService->alreadyReviewed(auth()->user(), $race)
             : false;
 
-        return view('races.show', compact('race', 'reviews', 'avgRating', 'alreadyReviewed'));
+        $weather = $this->weatherService->getForRace($race);
+
+        return view('races.show', compact('race', 'reviews', 'avgRating', 'alreadyReviewed', 'weather'));
     }
 }
