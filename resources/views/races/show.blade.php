@@ -579,9 +579,11 @@
                         <div style="font-size:1.3rem;font-weight:700;color:var(--text);line-height:1.1;">
                             {{ $weather->temperature !== null ? number_format($weather->temperature, 1).'°C' : '-' }}
                         </div>
+                        @if($weather->weather_condition)
                         <div style="font-size:0.72rem;color:var(--muted);margin-top:0.15rem;">
-                            {{ $weather->weather_condition ?? '날씨 정보 없음' }}
+                            {{ $weather->weather_condition }}
                         </div>
+                        @endif
                     </div>
                 </div>
                 <div class="s-row">
@@ -599,7 +601,13 @@
                     </div>
                 @endif
                 <p style="font-size:0.65rem;color:var(--muted);margin-top:0.6rem;">
-                    기상청 ASOS · {{ $race->race_date->format('Y.m.d') }} 09:00 기준
+                    @php
+                        $rawTm = data_get($weather->raw_data, 'tm', '');
+                        $obsTime = strlen($rawTm) >= 12
+                            ? substr($rawTm, 8, 2) . ':' . substr($rawTm, 10, 2)
+                            : ($race->weather_stn_id == 108 ? '07:00' : '08:00');
+                    @endphp
+                    기상청 ASOS · {{ $race->race_date->format('Y.m.d') }} {{ $obsTime }} 기준
                 </p>
             @else
                 <p style="font-size:0.78rem;color:var(--muted);text-align:center;padding:0.75rem 0;">
