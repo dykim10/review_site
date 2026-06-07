@@ -2,13 +2,14 @@
 
 namespace App\Services;
 
-use App\Models\Hashtag;
 use App\Models\Race;
 use App\Models\Review;
 use App\Models\User;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class ReviewService
 {
@@ -96,51 +97,56 @@ class ReviewService
         $review->delete();
     }
 
-    // ─── 이미지 헬퍼 ─────────────────────────────────────────────
+    // ─── 이미지 헬퍼 (CORE API → S3) ────────────────────────────
 
     private function uploadImages(array $files): array
     {
-        $disk  = $this->storageDisk();
-        $paths = [];
+        $urls = [];
+        $now  = now();
+        $folder = "reviews/{$now->year}/{$now->format('m')}";
+
         foreach ($files as $file) {
             if (!$file instanceof UploadedFile) continue;
-
-            $webp = $this->convertToWebp($file);
-            if ($webp !== null) {
-                $filename = 'reviews/' . uniqid('', true) . '.webp';
-                Storage::disk($disk)->put($filename, $webp);
-                $paths[] = $filename;
-            } else {
-                $paths[] = $file->store('reviews', $disk);
-            }
+            $url = $this->uploadToS3ViaCoreApi($file, $folder);
+            if ($url) $urls[] = $url;
         }
-        return $paths;
+        return $urls;
     }
 
-    private function convertToWebp(UploadedFile $file): ?string
+    private function uploadToS3ViaCoreApi(UploadedFile $file, string $folder): ?string
     {
-        $image = @imagecreatefromstring(file_get_contents($file->getRealPath()));
-        if (!$image) return null;
+        try {
+            $response = Http::timeout(30)
+                ->attach('file', file_get_contents($file->getRealPath()), $file->getClientOriginalName())
+                ->post(config('services.core_api.url') . '/api/photo/resize-webp', [
+                    'folder' => $folder,
+                ]);
 
-        ob_start();
-        imagewebp($image, null, 82);
-        $content = ob_get_clean();
-        imagedestroy($image);
+            if ($response->successful()) {
+                return $response->json('thumbnail_url');
+            }
 
-        return $content ?: null;
+            Log::warning('CORE API 이미지 업로드 실패', [
+                'status' => $response->status(),
+                'body'   => $response->body(),
+            ]);
+        } catch (ConnectionException $e) {
+            Log::error('CORE API 연결 오류 (이미지 업로드): ' . $e->getMessage());
+        }
+        return null;
     }
 
     private function deleteImageFiles(array $paths): void
     {
-        $disk = $this->storageDisk();
-        foreach ($paths as $path) {
-            if ($path) Storage::disk($disk)->delete($path);
+        foreach ($paths as $url) {
+            if (!$url) continue;
+            try {
+                Http::timeout(10)
+                    ->delete(config('services.core_api.url') . '/api/s3/image', ['url' => $url]);
+            } catch (ConnectionException $e) {
+                Log::warning('CORE API S3 삭제 오류: ' . $e->getMessage());
+            }
         }
-    }
-
-    private function storageDisk(): string
-    {
-        return config('filesystems.default') === 's3' ? 's3' : 'public';
     }
 
     // ─── 통계 ─────────────────────────────────────────────────
