@@ -16,24 +16,21 @@ class WeatherService
         $this->coreApiUrl = rtrim(config('services.core_api.url', 'http://localhost:8100'), '/');
     }
 
-    // 실패 후 재시도 유예 시간 (시간 단위)
-    private const RETRY_AFTER_HOURS = 24;
-
     /**
      * 대회 날씨 조회.
      *
-     * 호출 순서:
-     *   1. race_weather 테이블에 데이터 있으면 즉시 반환 (중복 호출 없음)
-     *   2. 미래 대회 → null
-     *   3. 이미 시도했고 유예 시간(24h) 미경과 → null (반복 호출 방지)
-     *   4. CORE API 호출 1회 — 성공/실패 무관하게 시도 시각 기록
+     * 방어 전략: race_weather 테이블이 단일 캐시.
+     *   - DB에 레코드 있음 → 즉시 반환 (API 재호출 없음)
+     *   - DB에 없음 → CORE API 1회 호출
+     *     - 성공: 날씨 데이터 저장 → 반환
+     *     - 실패/데이터 없음: 빈 마커 레코드 저장 → 이후 재호출 차단
      */
     public function getForRace(Race $race): ?RaceWeather
     {
-        // 1. DB에 날씨 데이터 있음 → 즉시 반환
+        // 1. DB에 레코드 있음 → 즉시 반환 (성공 데이터 또는 빈 마커 모두 포함)
         $cached = RaceWeather::where('race_id', $race->id)->first();
         if ($cached) {
-            return $cached;
+            return $cached->temperature !== null ? $cached : null;
         }
 
         // 2. 미래 대회 → 날씨 없음
@@ -41,15 +38,7 @@ class WeatherService
             return null;
         }
 
-        // 3. 이미 시도한 적 있고 유예 시간 미경과 → 재호출 방지
-        if ($race->weather_fetch_attempted_at &&
-            $race->weather_fetch_attempted_at->gt(now()->subHours(self::RETRY_AFTER_HOURS))) {
-            return null;
-        }
-
-        // 4. CORE API 호출 — 시도 시각을 먼저 기록해 동시 요청 중복 방지
-        $race->updateQuietly(['weather_fetch_attempted_at' => now()]);
-
+        // 3. CORE API 1회 호출
         try {
             $response = Http::timeout(10)
                 ->post("{$this->coreApiUrl}/api/weather/race/{$race->id}");
@@ -62,6 +51,13 @@ class WeatherService
         } catch (\Exception $e) {
             Log::warning("날씨 API 연결 오류 race_id={$race->id}: " . $e->getMessage());
         }
+
+        // 4. 실패 시 빈 마커 레코드 저장 → 이후 재호출 차단
+        RaceWeather::upsert(
+            [['race_id' => $race->id, 'fetched_at' => now()]],
+            ['race_id'],
+            ['fetched_at']
+        );
 
         return null;
     }
