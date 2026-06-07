@@ -14,18 +14,19 @@ class Race extends Model
         'name', 'race_date', 'race_time', 'location', 'city',
         'organizer', 'distances', 'entry_fee', 'website_url',
         'reg_start', 'reg_end', 'status', 'source', 'source_url', 'is_active',
-        'ai_race_summary', 'weather_stn_id',
+        'ai_race_summary', 'weather_stn_id', 'weather_fetch_attempted_at',
     ];
 
     protected function casts(): array
     {
         return [
-            'is_active'       => 'boolean',
-            'race_date'       => 'date',
-            'reg_start'       => 'date',
-            'reg_end'         => 'date',
-            'ai_race_summary' => 'array',
-            'weather_stn_id'  => 'integer',
+            'is_active'                    => 'boolean',
+            'race_date'                    => 'date',
+            'reg_start'                    => 'date',
+            'reg_end'                      => 'date',
+            'ai_race_summary'              => 'array',
+            'weather_stn_id'               => 'integer',
+            'weather_fetch_attempted_at'   => 'datetime',
         ];
     }
 
