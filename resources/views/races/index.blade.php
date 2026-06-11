@@ -362,10 +362,14 @@
             border-radius: 4px;
             letter-spacing: 0.06em;
         }
-        .b-receiving { background: rgba(34,197,94,0.12); color: #4ADE80; }
-        .b-upcoming  { background: rgba(96,165,250,0.12); color: #60A5FA; }
-        .b-closed    { background: rgba(239,68,68,0.1);   color: #F87171; }
-        .b-ended     { background: rgba(100,100,100,0.1); color: #666; }
+        .b-receiving   { background: rgba(34,197,94,0.12);  color: #4ADE80; }
+        .b-upcoming    { background: rgba(96,165,250,0.12); color: #60A5FA; }
+        .b-closed      { background: rgba(239,68,68,0.1);   color: #F87171; }
+        .b-ended       { background: rgba(100,100,100,0.1); color: #666; }
+        .b-wa-platinum { background: rgba(229,173,22,0.15); color: #E5AD16; border: 1px solid rgba(229,173,22,0.3); }
+        .b-wa-gold     { background: rgba(255,215,0,0.12);  color: #D4AF37; border: 1px solid rgba(212,175,55,0.3); }
+        .b-wa-elite    { background: rgba(192,192,192,0.12);color: #B0B0B0; border: 1px solid rgba(192,192,192,0.3); }
+        .b-wa-label    { background: rgba(205,127,50,0.12); color: #CD7F32; border: 1px solid rgba(205,127,50,0.3); }
 
         .badge-city {
             font-size: 0.65rem;
@@ -576,6 +580,31 @@
                     @endforeach
                 </div>
             </div>
+
+            {{-- WA 라벨 필터 --}}
+            <div class="s-card s-card-mt">
+                <div class="s-heading">공인 등급</div>
+                <div class="s-chips">
+                    @php
+                        $baseParam = array_filter(['city' => request('city'), 'status' => request('status')]);
+                    @endphp
+                    <a href="{{ route('races.index', $baseParam) }}"
+                       class="s-chip {{ !request('wa_label') ? 's-chip-active' : '' }}">
+                        <span class="s-dot"></span>전체
+                    </a>
+                    @foreach([
+                        'platinum' => 'WA PLATINUM',
+                        'gold'     => 'WA GOLD',
+                        'elite'    => 'WA ELITE',
+                        'label'    => 'WA LABEL',
+                    ] as $val => $txt)
+                        <a href="{{ route('races.index', array_merge($baseParam, ['wa_label' => $val])) }}"
+                           class="s-chip {{ request('wa_label') === $val ? 's-chip-active' : '' }}">
+                            <span class="s-dot"></span>{{ $txt }}
+                        </a>
+                    @endforeach
+                </div>
+            </div>
         </aside>
 
         {{-- Main --}}
@@ -613,6 +642,21 @@
                             default    => 'b-upcoming',
                         };
 
+                        $waLabelClass = match($race->wa_label ?? '') {
+                            'platinum' => 'b-wa-platinum',
+                            'gold'     => 'b-wa-gold',
+                            'elite'    => 'b-wa-elite',
+                            'label'    => 'b-wa-label',
+                            default    => '',
+                        };
+                        $waLabelText = match($race->wa_label ?? '') {
+                            'platinum' => 'WA PLATINUM',
+                            'gold'     => 'WA GOLD',
+                            'elite'    => 'WA ELITE',
+                            'label'    => 'WA LABEL',
+                            default    => '',
+                        };
+
                         $avgRating   = (float)($race->avg_rating ?? 0);
                         $reviewCount = (int)($race->review_count ?? 0);
                         $raceDate    = \Carbon\Carbon::parse($race->race_date);
@@ -623,6 +667,9 @@
                         <div class="r-top">
                             <div class="badge-row">
                                 <span class="badge {{ $statusClass }}">{{ $race->status ?? '접수전' }}</span>
+                                @if($waLabelClass)
+                                    <span class="badge {{ $waLabelClass }}">{{ $waLabelText }}</span>
+                                @endif
                                 @if($race->city)
                                     <span class="badge-city">{{ $race->city }}</span>
                                 @endif

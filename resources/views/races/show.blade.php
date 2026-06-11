@@ -63,11 +63,30 @@
 
         .status-row { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.85rem; flex-wrap: wrap; }
         .badge { font-size: 0.65rem; font-weight: 700; padding: 0.2rem 0.55rem; border-radius: 4px; letter-spacing: 0.06em; }
-        .b-receiving { background: rgba(34,197,94,0.12); color: #4ADE80; }
-        .b-upcoming  { background: rgba(96,165,250,0.12); color: #60A5FA; }
-        .b-closed    { background: rgba(239,68,68,0.1);   color: #F87171; }
-        .b-ended     { background: rgba(100,100,100,0.1); color: #666; }
-        .badge-city  { font-size: 0.65rem; padding: 0.2rem 0.55rem; border-radius: 4px; border: 1px solid var(--border); color: var(--muted); }
+        .b-receiving   { background: rgba(34,197,94,0.12);  color: #4ADE80; }
+        .b-upcoming    { background: rgba(96,165,250,0.12); color: #60A5FA; }
+        .b-closed      { background: rgba(239,68,68,0.1);   color: #F87171; }
+        .b-ended       { background: rgba(100,100,100,0.1); color: #666; }
+        .badge-city    { font-size: 0.65rem; padding: 0.2rem 0.55rem; border-radius: 4px; border: 1px solid var(--border); color: var(--muted); }
+        .b-wa-platinum { background: rgba(229,173,22,0.15); color: #E5AD16; border: 1px solid rgba(229,173,22,0.3); }
+        .b-wa-gold     { background: rgba(255,215,0,0.12);  color: #D4AF37; border: 1px solid rgba(212,175,55,0.3); }
+        .b-wa-elite    { background: rgba(192,192,192,0.12);color: #B0B0B0; border: 1px solid rgba(192,192,192,0.3); }
+        .b-wa-label    { background: rgba(205,127,50,0.12); color: #CD7F32; border: 1px solid rgba(205,127,50,0.3); }
+
+        /* ── WA 공인 카드 ───────────────────────────────────── */
+        .wa-card { border-radius: 12px; padding: 1px; }
+        .wa-card-platinum { background: linear-gradient(135deg, rgba(229,173,22,0.5), rgba(229,173,22,0.15)); }
+        .wa-card-gold     { background: linear-gradient(135deg, rgba(212,175,55,0.45), rgba(212,175,55,0.12)); }
+        .wa-card-elite    { background: linear-gradient(135deg, rgba(192,192,192,0.4), rgba(192,192,192,0.1)); }
+        .wa-card-label    { background: linear-gradient(135deg, rgba(205,127,50,0.4), rgba(205,127,50,0.1)); }
+        .wa-card-inner { background: var(--surface); border-radius: 11px; padding: 1.1rem 1.2rem; }
+        .wa-org { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.35rem; }
+        .wa-title { font-size: 0.78rem; font-weight: 600; color: var(--text2); margin-bottom: 0.75rem; }
+        .wa-tier-row { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.65rem; }
+        .wa-tier-badge { font-size: 0.7rem; font-weight: 700; padding: 0.25rem 0.65rem; border-radius: 5px; letter-spacing: 0.08em; }
+        .wa-desc { font-size: 0.72rem; color: var(--muted); line-height: 1.55; }
+        .wa-link { display: inline-flex; align-items: center; gap: 0.3rem; margin-top: 0.75rem; font-size: 0.72rem; color: var(--accent); transition: color 0.15s; }
+        .wa-link:hover { color: var(--accent-d); }
 
         .race-name { font-family: 'Bebas Neue', sans-serif; font-size: clamp(2.2rem, 5.5vw, 4rem); letter-spacing: 0.04em; line-height: 0.95; color: var(--text); margin-bottom: 1.1rem; }
 
@@ -271,6 +290,34 @@
         '대회종료' => 'b-ended',
         default    => 'b-upcoming',
     };
+    $waLabelClass = match($race->wa_label ?? '') {
+        'platinum' => 'b-wa-platinum',
+        'gold'     => 'b-wa-gold',
+        'elite'    => 'b-wa-elite',
+        'label'    => 'b-wa-label',
+        default    => '',
+    };
+    $waLabelText = match($race->wa_label ?? '') {
+        'platinum' => 'WA PLATINUM',
+        'gold'     => 'WA GOLD',
+        'elite'    => 'WA ELITE',
+        'label'    => 'WA LABEL',
+        default    => '',
+    };
+    $waCardClass = match($race->wa_label ?? '') {
+        'platinum' => 'wa-card-platinum',
+        'gold'     => 'wa-card-gold',
+        'elite'    => 'wa-card-elite',
+        'label'    => 'wa-card-label',
+        default    => '',
+    };
+    $waDesc = match($race->wa_label ?? '') {
+        'platinum' => '세계육상연맹이 인증한 최고 등급 대회입니다.',
+        'gold'     => '세계육상연맹 Gold Label 공인 대회입니다.',
+        'elite'    => '세계육상연맹 Elite Label 공인 대회입니다.',
+        'label'    => '세계육상연맹 공인 기준을 충족한 대회입니다.',
+        default    => '',
+    };
 @endphp
 
 <section class="race-hero">
@@ -284,6 +331,9 @@
             <div class="hero-left">
                 <div class="status-row">
                     <span class="badge {{ $statusClass }}">{{ $race->status ?? '접수전' }}</span>
+                    @if($waLabelClass)
+                        <span class="badge {{ $waLabelClass }}">{{ $waLabelText }}</span>
+                    @endif
                     @if($race->city)
                         <span class="badge-city">{{ $race->city }}</span>
                     @endif
@@ -561,6 +611,26 @@
 
     {{-- ── SIDEBAR ── --}}
     <aside class="sidebar">
+
+        {{-- WA 공인 카드 --}}
+        @if($waCardClass)
+            <div class="wa-card {{ $waCardClass }}">
+                <div class="wa-card-inner">
+                    <div class="wa-org">World Athletics</div>
+                    <div class="wa-title">세계육상연맹 공인 대회</div>
+                    <div class="wa-tier-row">
+                        <span class="badge {{ $waLabelClass }} wa-tier-badge">{{ $waLabelText }}</span>
+                    </div>
+                    <p class="wa-desc">{{ $waDesc }}</p>
+                    @if($race->official_url)
+                        <a href="{{ $race->official_url }}" target="_blank" rel="noopener" class="wa-link">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                            WA 공식 페이지
+                        </a>
+                    @endif
+                </div>
+            </div>
+        @endif
 
         {{-- Weather Card --}}
         @php

@@ -18,7 +18,7 @@ class RaceController extends Controller
 
     public function index(Request $request)
     {
-        $races = $this->raceService->getPublicListWithStats($request->only('city', 'status'));
+        $races = $this->raceService->getPublicListWithStats($request->only('city', 'status', 'wa_label'));
         return view('races.index', compact('races'));
     }
 

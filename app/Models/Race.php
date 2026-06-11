@@ -15,12 +15,14 @@ class Race extends Model
         'organizer', 'distances', 'entry_fee', 'website_url',
         'reg_start', 'reg_end', 'status', 'source', 'source_url', 'is_active',
         'ai_race_summary', 'weather_stn_id', 'weather_fetch_attempted_at',
+        'wa_label', 'is_certified', 'official_url', 'name_en',
     ];
 
     protected function casts(): array
     {
         return [
             'is_active'                    => 'boolean',
+            'is_certified'                 => 'boolean',
             'race_date'                    => 'date',
             'reg_start'                    => 'date',
             'reg_end'                      => 'date',
@@ -79,6 +81,16 @@ class Race extends Model
         return $status ? $query->where('status', $status) : $query;
     }
 
+    public function scopeCertified($query)
+    {
+        return $query->where('is_certified', true);
+    }
+
+    public function scopeByLabel($query, ?string $label)
+    {
+        return $label ? $query->where('wa_label', $label) : $query;
+    }
+
     // ─── Static Methods (복잡한 쿼리) ─────────────────────────
 
     /**
@@ -90,16 +102,19 @@ class Race extends Model
         int $perPage = 20,
         int $page = 1,
     ): \Illuminate\Pagination\LengthAwarePaginator {
-        $city   = $filters['city']   ?? null;
-        $status = $filters['status'] ?? null;
+        $city    = $filters['city']     ?? null;
+        $status  = $filters['status']   ?? null;
+        $waLabel = $filters['wa_label'] ?? null;
 
         $where = "WHERE r.is_active = true AND r.race_date >= CURRENT_DATE"
-            . ($city   ? " AND r.city = :city"     : '')
-            . ($status ? " AND r.status = :status" : '');
+            . ($city    ? " AND r.city = :city"         : '')
+            . ($status  ? " AND r.status = :status"     : '')
+            . ($waLabel ? " AND r.wa_label = :wa_label" : '');
 
         $bindings = [];
-        if ($city)   $bindings['city']   = $city;
-        if ($status) $bindings['status'] = $status;
+        if ($city)    $bindings['city']     = $city;
+        if ($status)  $bindings['status']   = $status;
+        if ($waLabel) $bindings['wa_label'] = $waLabel;
 
         $total = DB::selectOne(
             "SELECT COUNT(*) AS cnt FROM review.races r $where",
