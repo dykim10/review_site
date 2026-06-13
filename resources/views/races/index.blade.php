@@ -521,7 +521,7 @@
             <div class="hero-stats">
                 <div>
                     <div class="stat-num">{{ $races->count() }}</div>
-                    <div class="stat-label">예정 대회</div>
+                    <div class="stat-label">전체 대회</div>
                 </div>
                 <div>
                     <div class="stat-num">{{ $races->sum('review_count') }}</div>

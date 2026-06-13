@@ -116,7 +116,7 @@ class Race extends Model
         $status  = $filters['status']   ?? null;
         $waLabel = $filters['wa_label'] ?? null;
 
-        $where = "WHERE r.is_active = true AND r.race_date >= CURRENT_DATE"
+        $where = "WHERE r.is_active = true"
             . ($city    ? " AND r.city = :city"         : '')
             . ($status  ? " AND r.status = :status"     : '')
             . ($waLabel ? " AND r.wa_label = :wa_label" : '');
@@ -139,7 +139,7 @@ class Race extends Model
              LEFT JOIN review.reviews rv ON rv.race_id = r.id
              $where
              GROUP BY r.id
-             ORDER BY r.race_date ASC
+             ORDER BY r.race_date DESC
              LIMIT :limit OFFSET :offset",
             array_merge($bindings, ['limit' => $perPage, 'offset' => $offset])
         );
