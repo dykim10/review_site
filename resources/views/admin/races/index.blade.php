@@ -33,10 +33,10 @@
                             <td class="px-4 py-3">
                                 <a href="{{ route('races.show', $race) }}" class="hover:underline font-medium">{{ $race->name }}</a>
                             </td>
-                            <td class="px-4 py-3 text-gray-500">{{ $race->race_date?->format('Y.m.d') }}</td>
+                            <td class="px-4 py-3 text-gray-500">{{ $race->latestEdition?->race_date?->format('Y.m.d') ?? '-' }}</td>
                             <td class="px-4 py-3 text-gray-500">{{ $race->city ?? '-' }}</td>
                             <td class="px-4 py-3">
-                                <span class="px-2 py-0.5 rounded text-xs bg-blue-100 text-blue-700">{{ $race->status ?? '접수전' }}</span>
+                                <span class="px-2 py-0.5 rounded text-xs bg-blue-100 text-blue-700">{{ $race->latestEdition?->status ?? '접수전' }}</span>
                             </td>
                             <td class="px-4 py-3 text-right space-x-2">
                                 <a href="{{ route('admin.races.edit', $race) }}" class="text-blue-600 hover:underline">수정</a>

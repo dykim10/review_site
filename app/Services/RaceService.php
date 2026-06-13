@@ -3,100 +3,135 @@
 namespace App\Services;
 
 use App\Models\Race;
+use App\Models\RaceEdition;
 use Illuminate\Pagination\LengthAwarePaginator;
-use App\Services\RaceEditionService;
 
 class RaceService
 {
+    // races 테이블 전용 필드
+    private const RACE_FIELDS = [
+        'name', 'name_en', 'city', 'organizer',
+        'website_url', 'official_url', 'is_active',
+        'wa_label', 'is_certified', 'is_domestic', 'country',
+    ];
+
+    // race_editions 테이블 전용 필드
+    private const EDITION_FIELDS = [
+        'race_date', 'race_time', 'location', 'entry_fee',
+        'reg_start', 'reg_end', 'status', 'weather_stn_id',
+    ];
+
     // ─── 공개용 ───────────────────────────────────────────────
 
-    /**
-     * 공개 대회 목록 (필터 적용, 페이지네이션)
-     */
     public function getPublicList(array $filters, int $perPage = 12): LengthAwarePaginator
     {
         return Race::active()
-            ->upcoming()
             ->byCity($filters['city'] ?? null)
-            ->byStatus($filters['status'] ?? null)
-            ->orderBy('race_date')
+            ->orderByDesc('created_at')
             ->paginate($perPage);
     }
 
-    /**
-     * 공개 대회 목록 + 리뷰 통계 (avg_rating, review_count 포함, 페이지네이션)
-     */
-    public function getPublicListWithStats(array $filters, int $perPage = 20): \Illuminate\Pagination\LengthAwarePaginator
+    public function getPublicListWithStats(array $filters, int $perPage = 20): LengthAwarePaginator
     {
         return Race::listWithReviewStats($filters, $perPage, request()->integer('page', 1));
     }
 
     // ─── 관리자용 ─────────────────────────────────────────────
 
-    /**
-     * 관리자 대회 목록 (전체, 최신순)
-     */
     public function getAdminList(int $perPage = 20): LengthAwarePaginator
     {
-        return Race::orderByDesc('race_date')->paginate($perPage);
+        return Race::with('latestEdition')
+            ->orderByDesc('created_at')
+            ->paginate($perPage);
     }
 
     /**
-     * 대회 등록 — race + race_edition 동시 생성
+     * 대회 등록 — races 마스터 생성 + race_editions 최초 인스턴스 생성
      */
     public function create(array $validated, string $distancesRaw = ''): Race
     {
-        $validated['distances'] = $this->parseDistances($distancesRaw);
-        $race = Race::create($validated);
+        $raceData             = array_intersect_key($validated, array_flip(self::RACE_FIELDS));
+        $raceData['distances'] = $this->parseDistances($distancesRaw);
 
-        app(WeatherService::class)->autoResolveStn($race);
-        $race->refresh();
+        $race = Race::create($raceData);
 
-        app(RaceEditionService::class)->createFromRace($race);
+        $editionData = array_intersect_key($validated, array_flip(self::EDITION_FIELDS));
+        $year = isset($editionData['race_date']) && $editionData['race_date']
+            ? \Carbon\Carbon::parse($editionData['race_date'])->year
+            : 0;
+
+        $edition = RaceEdition::create(array_merge($editionData, [
+            'race_id'     => $race->id,
+            'name'        => $race->name,
+            'year'        => $year,
+            'city'        => $race->city,
+            'is_domestic' => $race->is_domestic ?? true,
+            'country'     => $race->country ?? '대한민국',
+        ]));
+
+        if (!$edition->weather_stn_id && ($edition->location || $edition->city)) {
+            app(WeatherService::class)->autoResolveStnForEdition($edition);
+        }
 
         return $race->fresh();
     }
 
     /**
-     * 대회 수정 — race + 연결된 race_edition 동기화
+     * 대회 수정 — races 마스터 수정 + 최신 race_edition 동기화
      */
     public function update(Race $race, array $validated, string $distancesRaw = ''): Race
     {
-        $validated['distances'] = $this->parseDistances($distancesRaw);
+        $raceData             = array_intersect_key($validated, array_flip(self::RACE_FIELDS));
+        $raceData['distances'] = $this->parseDistances($distancesRaw);
 
-        $locationChanged = isset($validated['location']) && $validated['location'] !== $race->location
-            || isset($validated['city']) && $validated['city'] !== $race->city;
-
-        if ($locationChanged && !$race->weather_stn_id) {
-            $validated['weather_stn_id'] = null;
-        }
-
-        $race->update($validated);
+        $race->update($raceData);
         $race->refresh();
 
-        if ($locationChanged) {
-            app(WeatherService::class)->autoResolveStn($race);
-            $race->refresh();
-        }
+        $editionData = array_intersect_key($validated, array_flip(self::EDITION_FIELDS));
+        $edition     = RaceEdition::where('race_id', $race->id)->orderByDesc('year')->first();
 
-        app(RaceEditionService::class)->syncFromRace($race);
+        if ($edition) {
+            $locationChanged =
+                (isset($editionData['location']) && $editionData['location'] !== $edition->location) ||
+                ($race->city !== $edition->city);
+
+            if ($locationChanged && empty($editionData['weather_stn_id'])) {
+                $editionData['weather_stn_id'] = null;
+            }
+
+            $edition->update(array_merge($editionData, [
+                'name' => $race->name,
+                'city' => $race->city,
+            ]));
+            $edition->refresh();
+
+            if ($locationChanged && !$edition->weather_stn_id) {
+                app(WeatherService::class)->autoResolveStnForEdition($edition);
+            }
+        } else {
+            $year = isset($editionData['race_date']) && $editionData['race_date']
+                ? \Carbon\Carbon::parse($editionData['race_date'])->year
+                : 0;
+            RaceEdition::create(array_merge($editionData, [
+                'race_id'     => $race->id,
+                'name'        => $race->name,
+                'year'        => $year,
+                'city'        => $race->city,
+                'is_domestic' => $race->is_domestic ?? true,
+                'country'     => $race->country ?? '대한민국',
+            ]));
+        }
 
         return $race->fresh();
     }
 
-    /**
-     * 대회 삭제
-     */
     public function delete(Race $race): void
     {
         $race->delete();
     }
 
-    // ─── Private 정제 메서드 ──────────────────────────────────
+    // ─── Private ──────────────────────────────────────────────
 
-    /**
-     * "5K,10K,하프,풀" 형태의 문자열을 배열로 변환
-     */
     private function parseDistances(string $raw): ?array
     {
         if (trim($raw) === '') {

@@ -282,9 +282,9 @@
 {{-- ── RACE HERO ── --}}
 @php
     $distArr   = $race->distances ?? [];
-    $raceDate  = \Carbon\Carbon::parse($race->race_date);
+    $raceDate  = $latestEdition?->race_date;
     $dayNames  = ['일','월','화','수','목','금','토'];
-    $statusClass = match($race->status ?? '') {
+    $statusClass = match($latestEdition?->status ?? '') {
         '접수중'   => 'b-receiving',
         '접수전'   => 'b-upcoming',
         '접수마감' => 'b-closed',
@@ -331,7 +331,7 @@
         <div class="hero-top">
             <div class="hero-left">
                 <div class="status-row">
-                    <span class="badge {{ $statusClass }}">{{ $race->status ?? '접수전' }}</span>
+                    <span class="badge {{ $statusClass }}">{{ $latestEdition?->status ?? '접수전' }}</span>
                     @if($waLabelClass)
                         <span class="badge {{ $waLabelClass }}">{{ $waLabelText }}</span>
                     @endif
@@ -345,13 +345,13 @@
                 <div class="hero-meta">
                     <span class="hero-meta-item">
                         <svg class="hero-meta-ico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                        {{ $raceDate->format('Y.m.d') }} ({{ $dayNames[$raceDate->dayOfWeek] }})
-                        @if($race->race_time) &nbsp;{{ $race->race_time }} @endif
+                        {{ $raceDate?->format('Y.m.d') ?? '-' }}{{ $raceDate ? ' ('.$dayNames[$raceDate->dayOfWeek].')' : '' }}
+                        @if($latestEdition?->race_time) &nbsp;{{ $latestEdition->race_time }} @endif
                     </span>
-                    @if($race->location)
+                    @if($latestEdition?->location)
                         <span class="hero-meta-item">
                             <svg class="hero-meta-ico" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                            {{ $race->location }}
+                            {{ $latestEdition->location }}
                         </span>
                     @endif
                     @if($race->organizer)
@@ -408,21 +408,21 @@
             <div class="detail-grid">
                 <div>
                     <div class="detail-label">대회일</div>
-                    <div class="detail-value">{{ $raceDate->format('Y년 m월 d일') }} ({{ $dayNames[$raceDate->dayOfWeek] }}){{ $race->race_time ? ' '.$race->race_time : '' }}</div>
+                    <div class="detail-value">{{ $raceDate?->format('Y년 m월 d일') ?? '-' }}{{ $raceDate ? ' ('.$dayNames[$raceDate->dayOfWeek].')' : '' }}{{ $latestEdition?->race_time ? ' '.$latestEdition->race_time : '' }}</div>
                 </div>
                 <div>
                     <div class="detail-label">장소</div>
-                    <div class="detail-value">{{ $race->location }}{{ $race->city ? ' · '.$race->city : '' }}</div>
+                    <div class="detail-value">{{ $latestEdition?->location }}{{ $race->city ? ' · '.$race->city : '' }}</div>
                 </div>
                 <div>
                     <div class="detail-label">접수 기간</div>
                     <div class="detail-value">
-                        {{ $race->reg_start?->format('Y.m.d') ?? '-' }} ~ {{ $race->reg_end?->format('Y.m.d') ?? '-' }}
+                        {{ $latestEdition?->reg_start?->format('Y.m.d') ?? '-' }} ~ {{ $latestEdition?->reg_end?->format('Y.m.d') ?? '-' }}
                     </div>
                 </div>
                 <div>
                     <div class="detail-label">참가비</div>
-                    <div class="detail-value">{{ $race->entry_fee ? number_format($race->entry_fee).'원~' : '-' }}</div>
+                    <div class="detail-value">{{ $latestEdition?->entry_fee ? number_format($latestEdition->entry_fee).'원~' : '-' }}</div>
                 </div>
                 @if($race->organizer)
                     <div>
@@ -670,7 +670,7 @@
 
         {{-- Weather Card --}}
         @php
-            $isFutureRace = $race->race_date->isFuture();
+            $isFutureRace = $latestEdition?->race_date?->isFuture() ?? false;
         @endphp
         <div class="s-card">
             <div class="s-heading">대회일 날씨</div>
@@ -711,9 +711,9 @@
                         $rawTm = data_get($weather->raw_data, 'tm', '');
                         $obsTime = strlen($rawTm) >= 12
                             ? substr($rawTm, 8, 2) . ':' . substr($rawTm, 10, 2)
-                            : ($race->weather_stn_id == 108 ? '07:00' : '08:00');
+                            : ($latestEdition?->weather_stn_id == 108 ? '07:00' : '08:00');
                     @endphp
-                    기상청 ASOS · {{ $race->race_date->format('Y.m.d') }} {{ $obsTime }} 기준
+                    기상청 ASOS · {{ $latestEdition?->race_date?->format('Y.m.d') ?? '-' }} {{ $obsTime }} 기준
                 </p>
             @else
                 <p style="font-size:0.78rem;color:var(--muted);text-align:center;padding:0.75rem 0;">
@@ -727,19 +727,19 @@
             <div class="s-heading">접수 정보</div>
             <div class="s-row">
                 <span class="s-key">접수 상태</span>
-                <span class="s-val s-val-accent">{{ $race->status ?? '미정' }}</span>
+                <span class="s-val s-val-accent">{{ $latestEdition?->status ?? '미정' }}</span>
             </div>
             <div class="s-row">
                 <span class="s-key">접수 시작</span>
-                <span class="s-val">{{ $race->reg_start?->format('Y.m.d') ?? '-' }}</span>
+                <span class="s-val">{{ $latestEdition?->reg_start?->format('Y.m.d') ?? '-' }}</span>
             </div>
             <div class="s-row">
                 <span class="s-key">접수 마감</span>
-                <span class="s-val">{{ $race->reg_end?->format('Y.m.d') ?? '-' }}</span>
+                <span class="s-val">{{ $latestEdition?->reg_end?->format('Y.m.d') ?? '-' }}</span>
             </div>
             <div class="s-row">
                 <span class="s-key">참가비</span>
-                <span class="s-val">{{ $race->entry_fee ? number_format($race->entry_fee).'원~' : '-' }}</span>
+                <span class="s-val">{{ $latestEdition?->entry_fee ? number_format($latestEdition->entry_fee).'원~' : '-' }}</span>
             </div>
         </div>
 

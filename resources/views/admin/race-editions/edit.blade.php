@@ -28,7 +28,7 @@
                 <option value="">연결 안 함 (독립 인스턴스)</option>
                 @foreach($races as $race)
                     <option value="{{ $race->id }}" @selected(old('race_id', $edition->race_id) == $race->id)>
-                        {{ $race->name }} ({{ $race->race_date?->format('Y') }})
+                        {{ $race->name }}{{ $race->latestEdition ? ' ('.$race->latestEdition->year.')' : '' }}
                     </option>
                 @endforeach
             </select>

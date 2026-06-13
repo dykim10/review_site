@@ -30,6 +30,7 @@ class RaceController extends Controller
 
     public function edit(Race $race)
     {
+        $race->load('latestEdition');
         return view('admin.races.edit', compact('race'));
     }
 

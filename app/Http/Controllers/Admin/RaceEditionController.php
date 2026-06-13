@@ -44,7 +44,7 @@ class RaceEditionController extends Controller
 
     public function create()
     {
-        $races = Race::orderBy('name')->get(['id', 'name', 'race_date']);
+        $races = Race::with('latestEdition')->orderBy('name')->get(['id', 'name']);
         return view('admin.race-editions.create', compact('races'));
     }
 
@@ -63,7 +63,7 @@ class RaceEditionController extends Controller
 
     public function edit(RaceEdition $raceEdition)
     {
-        $races = Race::orderBy('name')->get(['id', 'name', 'race_date']);
+        $races = Race::with('latestEdition')->orderBy('name')->get(['id', 'name']);
         return view('admin.race-editions.edit', [
             'edition' => $raceEdition,
             'races'   => $races,

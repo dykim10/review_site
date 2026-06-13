@@ -26,7 +26,7 @@
                 </div>
                 <div>
                     <label class="block text-sm font-medium mb-1">대회일 <span class="text-red-500">*</span></label>
-                    <input type="date" name="race_date" value="{{ old('race_date') }}" required class="w-full border rounded px-3 py-2 text-sm">
+                    <input type="date" name="race_date" value="{{ old('race_date') }}" class="w-full border rounded px-3 py-2 text-sm">
                 </div>
                 <div>
                     <label class="block text-sm font-medium mb-1">대회 시작시간</label>

@@ -11,33 +11,23 @@ class Race extends Model
     protected $table = 'review.races';
 
     protected $fillable = [
-        'name', 'name_en', 'city', 'organizer', 'distances', 'entry_fee',
+        'name', 'name_en', 'city', 'organizer', 'distances',
         'website_url', 'official_url', 'is_active',
         'ai_race_summary', 'wa_label', 'is_certified',
         'is_domestic', 'country',
-        // 하위 호환 — race_editions 전환 전까지 유지
-        'race_date', 'race_time', 'location',
-        'source', 'source_url',
-        'weather_stn_id', 'weather_fetch_attempted_at',
-        'reg_start', 'reg_end', 'status',
     ];
 
     protected function casts(): array
     {
         return [
-            'is_active'                    => 'boolean',
-            'is_certified'                 => 'boolean',
-            'is_domestic'                  => 'boolean',
-            'race_date'                    => 'date',
-            'reg_start'                    => 'date',
-            'reg_end'                      => 'date',
-            'ai_race_summary'              => 'array',
-            'weather_stn_id'               => 'integer',
-            'weather_fetch_attempted_at'   => 'datetime',
+            'is_active'       => 'boolean',
+            'is_certified'    => 'boolean',
+            'is_domestic'     => 'boolean',
+            'ai_race_summary' => 'array',
         ];
     }
 
-    // ─── Accessors / Mutators ─────────────────────────────────
+    // ─── Accessors ────────────────────────────────────────────
 
     protected function distances(): Attribute
     {
@@ -46,11 +36,9 @@ class Race extends Model
                 if (is_array($value)) return $value;
                 if (is_null($value) || $value === '') return null;
 
-                // JSON format: ["풀","하프","10K","5K"]
                 $decoded = json_decode($value, true);
                 if (is_array($decoded)) return $decoded;
 
-                // PostgreSQL text[] format: {"풀","하프","10K","5K"}
                 if (str_starts_with($value, '{') && str_ends_with($value, '}')) {
                     $inner = substr($value, 1, -1);
                     return $inner !== '' ? str_getcsv($inner, ',', '"') : [];
@@ -64,31 +52,29 @@ class Race extends Model
         );
     }
 
-    // ─── Scopes ───────────────────────────────────────────────
+    // ─── Relationships ────────────────────────────────────────
 
     public function editions()
     {
         return $this->hasMany(RaceEdition::class);
     }
 
+    /** 최신 연도(year max) 기준 단일 edition */
+    public function latestEdition()
+    {
+        return $this->hasOne(RaceEdition::class)->ofMany('year', 'max');
+    }
+
+    // ─── Scopes ───────────────────────────────────────────────
+
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
     }
 
-    public function scopeUpcoming($query)
-    {
-        return $query->where('race_date', '>=', now()->toDateString());
-    }
-
     public function scopeByCity($query, ?string $city)
     {
         return $city ? $query->where('city', $city) : $query;
-    }
-
-    public function scopeByStatus($query, ?string $status)
-    {
-        return $status ? $query->where('status', $status) : $query;
     }
 
     public function scopeCertified($query)
@@ -101,11 +87,11 @@ class Race extends Model
         return $label ? $query->where('wa_label', $label) : $query;
     }
 
-    // ─── Static Methods (복잡한 쿼리) ─────────────────────────
+    // ─── Static Methods ───────────────────────────────────────
 
     /**
-     * 대회 목록 + 리뷰 수 / 평균 평점 JOIN (raw query, 페이지네이션)
-     * 사용: 공개 대회 목록에서 리뷰 통계 함께 표시할 때
+     * 대회 목록 + 리뷰 수 / 평균 평점 JOIN.
+     * race_editions LATERAL JOIN으로 최신 edition의 날짜·상태·장소·참가비를 함께 반환.
      */
     public static function listWithReviewStats(
         array $filters = [],
@@ -118,7 +104,7 @@ class Race extends Model
 
         $where = "WHERE r.is_active = true"
             . ($city    ? " AND r.city = :city"         : '')
-            . ($status  ? " AND r.status = :status"     : '')
+            . ($status  ? " AND ed.status = :status"    : '')
             . ($waLabel ? " AND r.wa_label = :wa_label" : '');
 
         $bindings = [];
@@ -127,19 +113,37 @@ class Race extends Model
         if ($waLabel) $bindings['wa_label'] = $waLabel;
 
         $total = DB::selectOne(
-            "SELECT COUNT(*) AS cnt FROM review.races r $where",
+            "SELECT COUNT(*) AS cnt
+             FROM review.races r
+             LEFT JOIN LATERAL (
+                 SELECT race_date, status, location, entry_fee
+                 FROM review.race_editions
+                 WHERE race_id = r.id
+                 ORDER BY year DESC NULLS LAST
+                 LIMIT 1
+             ) ed ON true
+             $where",
             $bindings
         )->cnt;
 
         $offset = ($page - 1) * $perPage;
         $rows   = DB::select(
-            "SELECT r.*, COUNT(rv.id) AS review_count,
-                    ROUND(AVG(rv.rating)::numeric, 1) AS avg_rating
+            "SELECT r.*,
+                    COUNT(rv.id) AS review_count,
+                    ROUND(AVG(rv.rating)::numeric, 1) AS avg_rating,
+                    ed.race_date, ed.status, ed.location, ed.entry_fee
              FROM review.races r
              LEFT JOIN review.reviews rv ON rv.race_id = r.id
+             LEFT JOIN LATERAL (
+                 SELECT race_date, status, location, entry_fee
+                 FROM review.race_editions
+                 WHERE race_id = r.id
+                 ORDER BY year DESC NULLS LAST
+                 LIMIT 1
+             ) ed ON true
              $where
-             GROUP BY r.id
-             ORDER BY r.race_date DESC
+             GROUP BY r.id, ed.race_date, ed.status, ed.location, ed.entry_fee
+             ORDER BY ed.race_date DESC NULLS LAST
              LIMIT :limit OFFSET :offset",
             array_merge($bindings, ['limit' => $perPage, 'offset' => $offset])
         );

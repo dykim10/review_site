@@ -46,9 +46,11 @@ class RaceController extends Controller
                 ->first();
         }
 
+        $latestEdition = $editions->first();
+
         return view('races.show', compact(
             'race', 'reviews', 'avgRating', 'alreadyReviewed',
-            'weather', 'editions', 'myCompletion',
+            'weather', 'editions', 'myCompletion', 'latestEdition',
         ));
     }
 }

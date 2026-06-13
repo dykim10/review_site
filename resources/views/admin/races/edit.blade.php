@@ -26,15 +26,15 @@
                 </div>
                 <div>
                     <label class="block text-sm font-medium mb-1">대회일 <span class="text-red-500">*</span></label>
-                    <input type="date" name="race_date" value="{{ old('race_date', $race->race_date?->format('Y-m-d')) }}" required class="w-full border rounded px-3 py-2 text-sm">
+                    <input type="date" name="race_date" value="{{ old('race_date', $race->latestEdition?->race_date?->format('Y-m-d')) }}" class="w-full border rounded px-3 py-2 text-sm">
                 </div>
                 <div>
                     <label class="block text-sm font-medium mb-1">대회 시작시간</label>
-                    <input type="text" name="race_time" value="{{ old('race_time', $race->race_time) }}" placeholder="예: 09:00" class="w-full border rounded px-3 py-2 text-sm">
+                    <input type="text" name="race_time" value="{{ old('race_time', $race->latestEdition?->race_time) }}" placeholder="예: 09:00" class="w-full border rounded px-3 py-2 text-sm">
                 </div>
                 <div>
                     <label class="block text-sm font-medium mb-1">장소</label>
-                    <input type="text" name="location" value="{{ old('location', $race->location) }}" class="w-full border rounded px-3 py-2 text-sm">
+                    <input type="text" name="location" value="{{ old('location', $race->latestEdition?->location) }}" class="w-full border rounded px-3 py-2 text-sm">
                 </div>
                 <div>
                     <label class="block text-sm font-medium mb-1">도시</label>
@@ -46,21 +46,21 @@
                 </div>
                 <div>
                     <label class="block text-sm font-medium mb-1">참가비 (원)</label>
-                    <input type="number" name="entry_fee" value="{{ old('entry_fee', $race->entry_fee) }}" min="0" class="w-full border rounded px-3 py-2 text-sm">
+                    <input type="number" name="entry_fee" value="{{ old('entry_fee', $race->latestEdition?->entry_fee) }}" min="0" class="w-full border rounded px-3 py-2 text-sm">
                 </div>
                 <div>
                     <label class="block text-sm font-medium mb-1">접수 시작일</label>
-                    <input type="date" name="reg_start" value="{{ old('reg_start', $race->reg_start?->format('Y-m-d')) }}" class="w-full border rounded px-3 py-2 text-sm">
+                    <input type="date" name="reg_start" value="{{ old('reg_start', $race->latestEdition?->reg_start?->format('Y-m-d')) }}" class="w-full border rounded px-3 py-2 text-sm">
                 </div>
                 <div>
                     <label class="block text-sm font-medium mb-1">접수 종료일</label>
-                    <input type="date" name="reg_end" value="{{ old('reg_end', $race->reg_end?->format('Y-m-d')) }}" class="w-full border rounded px-3 py-2 text-sm">
+                    <input type="date" name="reg_end" value="{{ old('reg_end', $race->latestEdition?->reg_end?->format('Y-m-d')) }}" class="w-full border rounded px-3 py-2 text-sm">
                 </div>
                 <div>
                     <label class="block text-sm font-medium mb-1">상태</label>
                     <select name="status" class="w-full border rounded px-3 py-2 text-sm">
                         @foreach(['접수전','접수중','접수마감','대회종료'] as $s)
-                            <option value="{{ $s }}" @selected(old('status', $race->status) === $s)>{{ $s }}</option>
+                            <option value="{{ $s }}" @selected(old('status', $race->latestEdition?->status) === $s)>{{ $s }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -76,7 +76,7 @@
                     <label class="block text-sm font-medium mb-1">기상청 지점코드
                         <span class="text-gray-400 font-normal text-xs">(자동추론, 수동 보정 가능)</span>
                     </label>
-                    <input type="number" name="weather_stn_id" value="{{ old('weather_stn_id', $race->weather_stn_id) }}"
+                    <input type="number" name="weather_stn_id" value="{{ old('weather_stn_id', $race->latestEdition?->weather_stn_id) }}"
                            placeholder="예: 108 (서울), 112 (인천), 119 (수원)"
                            class="w-full border rounded px-3 py-2 text-sm">
                     <p class="text-xs text-gray-400 mt-1">비워두면 장소 기반 자동 추론 · 주요 코드: 서울 108 / 인천 112 / 수원 119 / 춘천 101 / 강릉 105 / 대전 133 / 광주 156 / 부산 159 / 제주 184</p>

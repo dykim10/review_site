@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Models\Race;
 use App\Models\RaceEdition;
 use App\Models\RaceWeather;
 use Illuminate\Support\Facades\Http;
@@ -34,8 +33,9 @@ class WeatherService
             return $cached->temperature !== null ? $cached : null;
         }
 
-        // 2. 미래 대회 → 날씨 없음
-        if ($race->race_date->isFuture()) {
+        // 2. 미래 대회 → 날씨 없음 (최신 edition 기준)
+        $latestDate = $race->editions()->orderByDesc('year')->value('race_date');
+        if (!$latestDate || \Carbon\Carbon::parse($latestDate)->isFuture()) {
             return null;
         }
 
@@ -61,34 +61,6 @@ class WeatherService
         );
 
         return null;
-    }
-
-    /**
-     * 장소명 → 기상청 지점코드 자동 추론 (CORE API 위임).
-     * 대회 등록/수정 시 호출하여 races.weather_stn_id 자동 설정.
-     */
-    public function autoResolveStn(Race $race): void
-    {
-        // 이미 지점코드가 수동 지정되어 있으면 덮어쓰지 않음
-        if ($race->weather_stn_id) {
-            return;
-        }
-
-        try {
-            $response = Http::timeout(8)->post("{$this->coreApiUrl}/api/weather/resolve-stn", [
-                'location' => $race->location ?? '',
-                'city'     => $race->city ?? '',
-            ]);
-
-            if ($response->successful()) {
-                $stnId = $response->json('stn_id');
-                if ($stnId) {
-                    $race->update(['weather_stn_id' => $stnId]);
-                }
-            }
-        } catch (\Exception $e) {
-            Log::info("지점코드 자동추론 실패 race_id={$race->id}: " . $e->getMessage());
-        }
     }
 
     /**
