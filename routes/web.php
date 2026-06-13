@@ -3,6 +3,7 @@
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RaceController;
 use App\Http\Controllers\ReviewController;
+use App\Http\Controllers\CompletionRecordController;
 use App\Http\Controllers\Admin\RaceController as AdminRaceController;
 use App\Http\Controllers\Admin\RaceEditionController as AdminRaceEditionController;
 use Illuminate\Support\Facades\Route;
@@ -23,6 +24,12 @@ Route::middleware('auth')->group(function () {
 // 공개 - 대회 목록/상세
 Route::get('/races', [RaceController::class, 'index'])->name('races.index');
 Route::get('/races/{race}', [RaceController::class, 'show'])->name('races.show');
+
+// 완주 기록 - 인증 필요
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::post('/races/{race}/completions', [CompletionRecordController::class, 'store'])->name('completions.store');
+    Route::delete('/completions/{record}', [CompletionRecordController::class, 'destroy'])->name('completions.destroy');
+});
 
 // 리뷰 - 인증 필요
 Route::middleware(['auth', 'verified'])->group(function () {

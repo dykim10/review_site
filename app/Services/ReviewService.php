@@ -44,12 +44,13 @@ class ReviewService
         $imagePaths = $this->uploadImages($validated['images'] ?? []);
 
         $review = Review::create([
-            'race_id'    => $race->id,
-            'user_id'    => $user->id,
-            'distance'   => $validated['distance'],
-            'rating'     => $validated['rating'],
-            'content'    => $validated['content'],
-            'image_urls' => $imagePaths,
+            'race_id'         => $race->id,
+            'race_edition_id' => $validated['race_edition_id'] ?? null,
+            'user_id'         => $user->id,
+            'distance'        => $validated['distance'],
+            'rating'          => $validated['rating'],
+            'content'         => $validated['content'],
+            'image_urls'      => $imagePaths,
         ]);
 
         $names = $this->hashtagService->parseInput($validated['hashtags'] ?? '');
@@ -74,12 +75,16 @@ class ReviewService
         $newPaths  = $this->uploadImages($validated['images'] ?? []);
         $finalPaths = array_values(array_merge($keepPaths, $newPaths));
 
-        $review->update([
+        $update = [
             'distance'   => $validated['distance'],
             'rating'     => $validated['rating'],
             'content'    => $validated['content'],
             'image_urls' => $finalPaths,
-        ]);
+        ];
+        if (array_key_exists('race_edition_id', $validated)) {
+            $update['race_edition_id'] = $validated['race_edition_id'];
+        }
+        $review->update($update);
 
         $names = $this->hashtagService->parseInput($validated['hashtags'] ?? '');
         $this->hashtagService->syncForReview($review, $names);

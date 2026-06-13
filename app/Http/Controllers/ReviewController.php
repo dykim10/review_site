@@ -23,7 +23,8 @@ class ReviewController extends Controller
                 ->with('error', '이미 이 대회에 리뷰를 작성하셨습니다.');
         }
 
-        return view('reviews.create', compact('race'));
+        $editions = $race->editions()->orderByDesc('year')->get(['id', 'year', 'race_date', 'name']);
+        return view('reviews.create', compact('race', 'editions'));
     }
 
     public function store(StoreReviewRequest $request, Race $race): RedirectResponse
@@ -44,7 +45,9 @@ class ReviewController extends Controller
     public function edit(Review $review)
     {
         $this->authorizeReview($review);
-        return view('reviews.edit', compact('review'));
+        $race     = Race::findOrFail($review->race_id);
+        $editions = $race->editions()->orderByDesc('year')->get(['id', 'year', 'race_date', 'name']);
+        return view('reviews.edit', compact('review', 'editions'));
     }
 
     public function update(StoreReviewRequest $request, Review $review): RedirectResponse

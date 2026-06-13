@@ -164,6 +164,29 @@
             @csrf
             @method('PUT')
 
+            {{-- Edition (참가 연도) --}}
+            @if(isset($editions) && $editions->isNotEmpty())
+            <div class="field">
+                <label class="field-label">참가 연도
+                    <span class="field-label-hint">(선택)</span>
+                </label>
+                <select name="race_edition_id" class="field-input">
+                    <option value="">연도 선택 안 함</option>
+                    @foreach($editions as $ed)
+                        <option value="{{ $ed->id }}"
+                            @selected(old('race_edition_id', $review->race_edition_id) == $ed->id)>
+                            {{ $ed->year }}년
+                            @if($ed->race_date) ({{ $ed->race_date->format('Y.m.d') }}) @endif
+                        </option>
+                    @endforeach
+                </select>
+                @error('race_edition_id')
+                    <p class="field-error">{{ $message }}</p>
+                @enderror
+            </div>
+            <hr class="form-divider">
+            @endif
+
             {{-- Distance --}}
             <div class="field">
                 <label class="field-label">참가 거리</label>

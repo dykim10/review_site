@@ -233,6 +233,7 @@
         .admin-link:hover { color: var(--text); border-color: var(--text2); }
         .admin-del { color: rgba(248,113,113,0.6); }
         .admin-del:hover { color: #F87171; border-color: #F87171; }
+        .hidden { display: none !important; }
 
         /* ── ALERTS ──────────────────────────────────── */
         .alert { padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.82rem; margin-bottom: 1rem; }
@@ -437,6 +438,41 @@
                 @endif
             </div>
         </div>
+
+        {{-- 개최 이력 --}}
+        @if($editions->isNotEmpty())
+        <div class="info-card">
+            <div class="card-heading">개최 이력</div>
+            <table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
+                <thead>
+                    <tr style="border-bottom:1px solid var(--border);">
+                        <th style="text-align:left;padding:0.4rem 0.5rem;color:var(--muted);font-size:0.7rem;font-weight:600;letter-spacing:0.06em;">연도</th>
+                        <th style="text-align:left;padding:0.4rem 0.5rem;color:var(--muted);font-size:0.7rem;font-weight:600;letter-spacing:0.06em;">대회일</th>
+                        <th style="text-align:center;padding:0.4rem 0.5rem;color:var(--muted);font-size:0.7rem;font-weight:600;letter-spacing:0.06em;">리뷰</th>
+                        <th style="text-align:center;padding:0.4rem 0.5rem;color:var(--muted);font-size:0.7rem;font-weight:600;letter-spacing:0.06em;">완주 기록</th>
+                        <th style="text-align:left;padding:0.4rem 0.5rem;color:var(--muted);font-size:0.7rem;font-weight:600;letter-spacing:0.06em;">상태</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($editions as $ed)
+                    <tr style="border-bottom:1px solid rgba(36,36,36,0.5);">
+                        <td style="padding:0.55rem 0.5rem;color:var(--text);font-weight:600;">{{ $ed->year ?: '-' }}</td>
+                        <td style="padding:0.55rem 0.5rem;color:var(--text2);">{{ $ed->race_date?->format('Y.m.d') ?? '-' }}</td>
+                        <td style="padding:0.55rem 0.5rem;text-align:center;color:var(--text2);">{{ $ed->reviews_count }}</td>
+                        <td style="padding:0.55rem 0.5rem;text-align:center;color:var(--text2);">{{ $ed->completion_records_count }}</td>
+                        <td style="padding:0.55rem 0.5rem;">
+                            @php
+                                $edSt = $ed->status ?? '접수전';
+                                $edStCls = match($edSt) { '접수중' => 'b-receiving', '접수전' => 'b-upcoming', '접수마감' => 'b-closed', '대회종료' => 'b-ended', default => 'b-upcoming' };
+                            @endphp
+                            <span class="badge {{ $edStCls }}" style="font-size:0.6rem;">{{ $edSt }}</span>
+                        </td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+        @endif
 
         {{-- AI Summary --}}
         @if($race->ai_race_summary)
@@ -706,6 +742,69 @@
                 <span class="s-val">{{ $race->entry_fee ? number_format($race->entry_fee).'원~' : '-' }}</span>
             </div>
         </div>
+
+        {{-- 완주 기록 카드 --}}
+        @if($editions->isNotEmpty())
+        <div class="s-card">
+            <div class="s-heading">완주 기록</div>
+            @auth
+                @if($myCompletion)
+                    <div style="margin-bottom:0.75rem;">
+                        <div style="font-size:0.75rem;color:var(--text2);font-weight:600;margin-bottom:0.2rem;">
+                            {{ $myCompletion->raceEdition?->year }}년 완주
+                        </div>
+                        @if($myCompletion->finish_time_seconds)
+                        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--accent);letter-spacing:0.06em;line-height:1.1;">
+                            {{ $myCompletion->finish_time_formatted }}
+                        </div>
+                        @endif
+                        @if($myCompletion->bib_number)
+                        <div style="font-size:0.72rem;color:var(--muted);margin-top:0.15rem;">번호표: {{ $myCompletion->bib_number }}</div>
+                        @endif
+                        @if($myCompletion->certificate_image_url)
+                        <a href="{{ $myCompletion->certificate_image_url }}" target="_blank" rel="noopener"
+                           style="display:inline-block;margin-top:0.5rem;font-size:0.72rem;color:var(--accent);">🏅 완주 인증서 보기</a>
+                        @endif
+                    </div>
+                    <form method="POST" action="{{ route('completions.destroy', $myCompletion) }}"
+                          onsubmit="return confirm('완주 기록을 삭제하시겠습니까?')">
+                        @csrf @method('DELETE')
+                        <button type="submit" class="action-btn action-secondary" style="font-size:0.76rem;padding:0.45rem;">기록 삭제</button>
+                    </form>
+                @else
+                    <p style="font-size:0.78rem;color:var(--muted);margin-bottom:0.75rem;">이 대회를 완주하셨나요?</p>
+                    <button type="button" class="action-btn action-reg"
+                            onclick="document.getElementById('completion-form').classList.toggle('hidden')">
+                        + 완주 기록 등록
+                    </button>
+                    <div id="completion-form" class="hidden" style="margin-top:0.85rem;padding-top:0.85rem;border-top:1px solid var(--border);">
+                        <form method="POST" action="{{ route('completions.store', $race) }}" enctype="multipart/form-data">
+                            @csrf
+                            <select name="race_edition_id" required
+                                    style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:0.45rem 0.65rem;font-size:0.8rem;color:var(--text);margin-bottom:0.5rem;font-family:'Noto Sans KR',sans-serif;">
+                                <option value="">회차 선택 *</option>
+                                @foreach($editions as $ed)
+                                    <option value="{{ $ed->id }}">{{ $ed->year }}년 {{ $ed->race_date?->format('m.d') }}</option>
+                                @endforeach
+                            </select>
+                            <input type="text" name="finish_time" placeholder="완주 기록 (예: 3:45:30)" maxlength="10"
+                                   style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:0.45rem 0.65rem;font-size:0.8rem;color:var(--text);margin-bottom:0.5rem;font-family:'Noto Sans KR',sans-serif;">
+                            <input type="text" name="official_time" placeholder="공식 기록 (선택)" maxlength="10"
+                                   style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:0.45rem 0.65rem;font-size:0.8rem;color:var(--text);margin-bottom:0.5rem;font-family:'Noto Sans KR',sans-serif;">
+                            <input type="text" name="bib_number" placeholder="번호표 (선택)" maxlength="20"
+                                   style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:0.45rem 0.65rem;font-size:0.8rem;color:var(--text);margin-bottom:0.5rem;font-family:'Noto Sans KR',sans-serif;">
+                            <label style="display:block;font-size:0.72rem;color:var(--muted);margin-bottom:0.3rem;">완주 인증서 (선택, 10MB 이하)</label>
+                            <input type="file" name="certificate" accept="image/*"
+                                   style="width:100%;font-size:0.75rem;color:var(--text2);margin-bottom:0.6rem;">
+                            <button type="submit" class="action-btn action-primary" style="font-size:0.78rem;padding:0.5rem;">등록하기</button>
+                        </form>
+                    </div>
+                @endif
+            @else
+                <p style="font-size:0.78rem;color:var(--muted);">로그인 후 완주 기록을 등록할 수 있습니다.</p>
+            @endauth
+        </div>
+        @endif
 
         {{-- Action Buttons --}}
         <div class="s-card">

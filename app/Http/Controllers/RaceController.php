@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CompletionRecord;
 use App\Models\Race;
 use App\Services\RaceService;
 use App\Services\ReviewService;
@@ -24,14 +25,30 @@ class RaceController extends Controller
 
     public function show(Race $race)
     {
-        $reviews  = $this->reviewService->getByRace($race);
-        $avgRating = $this->reviewService->avgRating($race);
+        $reviews         = $this->reviewService->getByRace($race);
+        $avgRating       = $this->reviewService->avgRating($race);
         $alreadyReviewed = auth()->check()
             ? $this->reviewService->alreadyReviewed(auth()->user(), $race)
             : false;
 
-        $weather = $this->weatherService->getForRace($race);
+        $weather  = $this->weatherService->getForRace($race);
+        $editions = $race->editions()
+            ->withCount('reviews')
+            ->withCount('completionRecords')
+            ->orderByDesc('year')
+            ->get();
 
-        return view('races.show', compact('race', 'reviews', 'avgRating', 'alreadyReviewed', 'weather'));
+        $myCompletion = null;
+        if (auth()->check() && $editions->isNotEmpty()) {
+            $myCompletion = CompletionRecord::where('user_id', auth()->id())
+                ->whereIn('race_edition_id', $editions->pluck('id'))
+                ->with('raceEdition')
+                ->first();
+        }
+
+        return view('races.show', compact(
+            'race', 'reviews', 'avgRating', 'alreadyReviewed',
+            'weather', 'editions', 'myCompletion',
+        ));
     }
 }

@@ -14,11 +14,12 @@ class StoreReviewRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'race_edition_id'    => 'nullable|integer|exists:review.race_editions,id',
             'distance'           => 'required|string|max:20',
             'rating'             => 'required|integer|min:1|max:5',
             'content'            => 'required|string|min:10|max:2000',
             'images'             => 'nullable|array|max:10',
-            'images.*'           => 'file|image|max:10240',   // 파일당 최대 10MB
+            'images.*'           => 'file|image|max:10240',
             'existing_images'    => 'nullable|array|max:10',
             'existing_images.*'  => 'nullable|string|max:500',
             'hashtags'           => 'nullable|string|max:500',
