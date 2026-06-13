@@ -4,6 +4,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RaceController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\Admin\RaceController as AdminRaceController;
+use App\Http\Controllers\Admin\RaceEditionController as AdminRaceEditionController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [RaceController::class, 'index'])->name('home');
@@ -35,6 +36,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 // 관리자 - 대회 CRUD
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'admin'])->group(function () {
     Route::resource('races', AdminRaceController::class);
+    Route::resource('race-editions', AdminRaceEditionController::class);
 });
 
 require __DIR__.'/auth.php';

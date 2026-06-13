@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>대회 인스턴스 수정</title>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+</head>
+<body class="bg-gray-50 p-6">
+<div class="max-w-2xl mx-auto">
+    <a href="{{ route('admin.race-editions.index') }}" class="text-sm text-gray-500 hover:underline">← 목록</a>
+    <h1 class="text-xl font-bold mt-4 mb-6">대회 인스턴스 수정</h1>
+
+    @if($errors->any())
+        <div class="bg-red-50 border border-red-200 text-red-700 rounded p-4 mb-4 text-sm">
+            <ul class="list-disc list-inside">@foreach($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul>
+        </div>
+    @endif
+
+    <form method="POST" action="{{ route('admin.race-editions.update', $edition) }}"
+          class="bg-white rounded-lg shadow p-6 space-y-4">
+        @csrf @method('PUT')
+
+        <div>
+            <label class="block text-sm font-medium mb-1">원본 대회 연결
+                <span class="text-gray-400 font-normal text-xs">(선택)</span>
+            </label>
+            <select name="race_id" class="w-full border rounded px-3 py-2 text-sm">
+                <option value="">연결 안 함 (독립 인스턴스)</option>
+                @foreach($races as $race)
+                    <option value="{{ $race->id }}" @selected(old('race_id', $edition->race_id) == $race->id)>
+                        {{ $race->name }} ({{ $race->race_date?->format('Y') }})
+                    </option>
+                @endforeach
+            </select>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+            <div class="col-span-2">
+                <label class="block text-sm font-medium mb-1">대회명 <span class="text-red-500">*</span></label>
+                <input type="text" name="name" value="{{ old('name', $edition->name) }}" required
+                       class="w-full border rounded px-3 py-2 text-sm">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium mb-1">대회일</label>
+                <input type="date" name="race_date"
+                       value="{{ old('race_date', $edition->race_date?->format('Y-m-d')) }}"
+                       class="w-full border rounded px-3 py-2 text-sm">
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1">개최 연도 <span class="text-red-500">*</span></label>
+                <input type="number" name="year" value="{{ old('year', $edition->year) }}" required
+                       min="1990" max="2100"
+                       class="w-full border rounded px-3 py-2 text-sm">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium mb-1">시작 시간</label>
+                <input type="text" name="race_time" value="{{ old('race_time', $edition->race_time) }}"
+                       placeholder="예: 09:00" class="w-full border rounded px-3 py-2 text-sm">
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1">상태</label>
+                <select name="status" class="w-full border rounded px-3 py-2 text-sm">
+                    @foreach(['접수전','접수중','접수마감','대회종료'] as $s)
+                        <option value="{{ $s }}" @selected(old('status', $edition->status) === $s)>{{ $s }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium mb-1">장소</label>
+                <input type="text" name="location" value="{{ old('location', $edition->location) }}"
+                       class="w-full border rounded px-3 py-2 text-sm">
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1">도시</label>
+                <input type="text" name="city" value="{{ old('city', $edition->city) }}"
+                       class="w-full border rounded px-3 py-2 text-sm">
+            </div>
+
+            <div class="col-span-2">
+                <label class="block text-sm font-medium mb-2">국내/해외 구분</label>
+                <div class="flex gap-4">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="is_domestic" value="1"
+                               @checked(old('is_domestic', $edition->is_domestic ? '1' : '0') === '1')
+                               class="accent-blue-600" id="dom_yes">
+                        <span class="text-sm">국내</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="is_domestic" value="0"
+                               @checked(old('is_domestic', $edition->is_domestic ? '1' : '0') === '0')
+                               class="accent-purple-600" id="dom_no">
+                        <span class="text-sm">해외</span>
+                    </label>
+                </div>
+            </div>
+            <div class="col-span-2" id="country_row"
+                 style="{{ old('is_domestic', $edition->is_domestic ? '1' : '0') === '1' ? 'display:none' : '' }}">
+                <label class="block text-sm font-medium mb-1">국가</label>
+                <input type="text" name="country"
+                       value="{{ old('country', $edition->country) }}"
+                       placeholder="예: 일본, 미국, 독일"
+                       class="w-full border rounded px-3 py-2 text-sm">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium mb-1">참가비</label>
+                <input type="text" name="entry_fee" value="{{ old('entry_fee', $edition->entry_fee) }}"
+                       class="w-full border rounded px-3 py-2 text-sm">
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1">기상청 지점코드
+                    <span class="text-gray-400 font-normal text-xs">(비워두면 자동추론)</span>
+                </label>
+                <input type="number" name="weather_stn_id"
+                       value="{{ old('weather_stn_id', $edition->weather_stn_id) }}"
+                       class="w-full border rounded px-3 py-2 text-sm">
+                <p class="text-xs text-gray-400 mt-1">서울 108 / 인천 112 / 수원 119 / 대전 133 / 광주 156 / 부산 159 / 제주 184</p>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium mb-1">접수 시작일</label>
+                <input type="date" name="reg_start"
+                       value="{{ old('reg_start', $edition->reg_start?->format('Y-m-d')) }}"
+                       class="w-full border rounded px-3 py-2 text-sm">
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1">접수 종료일</label>
+                <input type="date" name="reg_end"
+                       value="{{ old('reg_end', $edition->reg_end?->format('Y-m-d')) }}"
+                       class="w-full border rounded px-3 py-2 text-sm">
+            </div>
+
+            <div class="col-span-2 flex items-center gap-2">
+                <input type="checkbox" name="is_active" value="1" id="is_active"
+                       @checked(old('is_active', $edition->is_active))
+                       class="accent-blue-600">
+                <label for="is_active" class="text-sm">활성화 (목록 노출)</label>
+            </div>
+        </div>
+
+        <div class="flex justify-end gap-3 pt-2">
+            <a href="{{ route('admin.race-editions.index') }}"
+               class="px-4 py-2 text-sm border rounded hover:bg-gray-50">취소</a>
+            <button type="submit"
+                    class="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">저장</button>
+        </div>
+    </form>
+</div>
+
+<script>
+document.querySelectorAll('input[name="is_domestic"]').forEach(el => {
+    el.addEventListener('change', () => {
+        document.getElementById('country_row').style.display = el.value === '0' ? '' : 'none';
+    });
+});
+</script>
+</body>
+</html>

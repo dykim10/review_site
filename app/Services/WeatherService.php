@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Race;
+use App\Models\RaceEdition;
 use App\Models\RaceWeather;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -87,6 +88,33 @@ class WeatherService
             }
         } catch (\Exception $e) {
             Log::info("지점코드 자동추론 실패 race_id={$race->id}: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * race_editions 기반 지점코드 자동 추론.
+     * 대회 인스턴스 등록/수정 시 호출.
+     */
+    public function autoResolveStnForEdition(RaceEdition $edition): void
+    {
+        if ($edition->weather_stn_id) {
+            return;
+        }
+
+        try {
+            $response = Http::timeout(8)->post("{$this->coreApiUrl}/api/weather/resolve-stn", [
+                'location' => $edition->location ?? '',
+                'city'     => $edition->city ?? '',
+            ]);
+
+            if ($response->successful()) {
+                $stnId = $response->json('stn_id');
+                if ($stnId) {
+                    $edition->update(['weather_stn_id' => $stnId]);
+                }
+            }
+        } catch (\Exception $e) {
+            Log::info("지점코드 자동추론 실패 edition_id={$edition->id}: " . $e->getMessage());
         }
     }
 
