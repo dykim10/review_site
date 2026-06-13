@@ -10,7 +10,7 @@ class Review extends Model
     protected $table = 'review.reviews';
 
     protected $fillable = [
-        'race_id', 'user_id', 'distance',
+        'race_id', 'race_edition_id', 'user_id', 'distance',
         'rating', 'content', 'ai_summary', 'sentiment',
         'image_urls',
     ];
@@ -37,6 +37,11 @@ class Review extends Model
     public function race()
     {
         return $this->belongsTo(Race::class);
+    }
+
+    public function raceEdition()
+    {
+        return $this->belongsTo(RaceEdition::class, 'race_edition_id');
     }
 
     public function user()

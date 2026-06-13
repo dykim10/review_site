@@ -11,11 +11,15 @@ class Race extends Model
     protected $table = 'review.races';
 
     protected $fillable = [
-        'name', 'race_date', 'race_time', 'location', 'city',
-        'organizer', 'distances', 'entry_fee', 'website_url',
-        'reg_start', 'reg_end', 'status', 'source', 'source_url', 'is_active',
-        'ai_race_summary', 'weather_stn_id', 'weather_fetch_attempted_at',
-        'wa_label', 'is_certified', 'official_url', 'name_en',
+        'name', 'name_en', 'city', 'organizer', 'distances', 'entry_fee',
+        'website_url', 'official_url', 'is_active',
+        'ai_race_summary', 'wa_label', 'is_certified',
+        'is_domestic', 'country',
+        // 하위 호환 — race_editions 전환 전까지 유지
+        'race_date', 'race_time', 'location',
+        'source', 'source_url',
+        'weather_stn_id', 'weather_fetch_attempted_at',
+        'reg_start', 'reg_end', 'status',
     ];
 
     protected function casts(): array
@@ -23,6 +27,7 @@ class Race extends Model
         return [
             'is_active'                    => 'boolean',
             'is_certified'                 => 'boolean',
+            'is_domestic'                  => 'boolean',
             'race_date'                    => 'date',
             'reg_start'                    => 'date',
             'reg_end'                      => 'date',
@@ -60,6 +65,11 @@ class Race extends Model
     }
 
     // ─── Scopes ───────────────────────────────────────────────
+
+    public function editions()
+    {
+        return $this->hasMany(RaceEdition::class);
+    }
 
     public function scopeActive($query)
     {

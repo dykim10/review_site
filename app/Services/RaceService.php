@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Race;
 use Illuminate\Pagination\LengthAwarePaginator;
+use App\Services\RaceEditionService;
 
 class RaceService
 {
@@ -41,32 +42,33 @@ class RaceService
     }
 
     /**
-     * 대회 등록
+     * 대회 등록 — race + race_edition 동시 생성
      */
     public function create(array $validated, string $distancesRaw = ''): Race
     {
         $validated['distances'] = $this->parseDistances($distancesRaw);
         $race = Race::create($validated);
 
-        // 장소명 → 기상청 지점코드 자동 추론 (CORE API)
         app(WeatherService::class)->autoResolveStn($race);
+        $race->refresh();
+
+        app(RaceEditionService::class)->createFromRace($race);
 
         return $race->fresh();
     }
 
     /**
-     * 대회 수정
+     * 대회 수정 — race + 연결된 race_edition 동기화
      */
     public function update(Race $race, array $validated, string $distancesRaw = ''): Race
     {
         $validated['distances'] = $this->parseDistances($distancesRaw);
 
-        // 장소/도시가 변경되면 지점코드 재추론 (수동 지정이 없는 경우)
         $locationChanged = isset($validated['location']) && $validated['location'] !== $race->location
             || isset($validated['city']) && $validated['city'] !== $race->city;
 
         if ($locationChanged && !$race->weather_stn_id) {
-            $validated['weather_stn_id'] = null; // 재추론 트리거
+            $validated['weather_stn_id'] = null;
         }
 
         $race->update($validated);
@@ -74,7 +76,10 @@ class RaceService
 
         if ($locationChanged) {
             app(WeatherService::class)->autoResolveStn($race);
+            $race->refresh();
         }
+
+        app(RaceEditionService::class)->syncFromRace($race);
 
         return $race->fresh();
     }
