@@ -110,9 +110,6 @@
         .parse-loading { font-size: 0.82rem; color: var(--ink-3); margin-top: 0.6rem; display: none; text-align: center; }
         .parse-error { font-size: 0.8rem; color: var(--pink); margin-top: 0.6rem; display: none; }
 
-        .strava-coming { padding: 1.25rem; border: 1px dashed var(--line); border-radius: 10px; text-align: center; }
-        .strava-coming p { font-size: 0.82rem; color: var(--ink-3); margin-top: 0.4rem; }
-
         /* ── STAR RATING ── */
         .star-rating { display: flex; gap: 0.25rem; }
         .star-label { cursor: pointer; display: flex; }
@@ -300,24 +297,11 @@
             <input type="hidden" name="parsed_watch_data" id="parsed-watch-hidden" value="{{ old('parsed_watch_data') }}">
 
             <div class="source-tabs">
-                <div class="source-tab" data-panel="strava" data-source="strava">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="display:inline;vertical-align:-2px;margin-right:3px"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
-                    Strava
-                </div>
                 <div class="source-tab active" data-panel="watch" data-source="image">
                     📷 워치 스크린샷
                 </div>
                 <div class="source-tab" data-panel="manual" data-source="manual">
                     ✏️ 직접 입력
-                </div>
-            </div>
-
-            {{-- Strava 패널 (Phase 4 예정) --}}
-            <div class="source-panel" id="panel-strava">
-                <div class="strava-coming">
-                    <div style="font-size:1.8rem;">🚧</div>
-                    <p>Strava 연동은 추후 지원 예정입니다.</p>
-                    <p style="margin-top:0.25rem;font-size:0.75rem;">워치 스크린샷 또는 직접 입력을 사용해주세요.</p>
                 </div>
             </div>
 

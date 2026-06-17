@@ -14,7 +14,7 @@ class Review extends Model
         'rating', 'content', 'ai_summary', 'sentiment',
         'image_urls',
         'finish_time', 'course_type', 'source',
-        'parsed_watch_data', 'strava_activity_id', 'gpx_url', 'is_certified',
+        'parsed_watch_data', 'gpx_url', 'is_certified',
     ];
 
     protected function casts(): array

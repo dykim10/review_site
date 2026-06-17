@@ -18,7 +18,7 @@ class StoreReviewRequest extends FormRequest
             'distance'           => 'required|string|max:20',
             'course_type'        => 'nullable|in:FULL,HALF,10K',
             'finish_time'        => ['nullable', 'regex:/^\d{1,2}:\d{2}:\d{2}$/'],
-            'source'             => 'nullable|in:strava,image,manual',
+            'source'             => 'nullable|in:gpx,image,manual',
             'parsed_watch_data'  => 'nullable|json',
             'rating'             => 'required|integer|min:1|max:5',
             'content'            => 'required|string|min:10|max:2000',

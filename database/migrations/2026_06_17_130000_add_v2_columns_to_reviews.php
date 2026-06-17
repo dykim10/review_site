@@ -18,7 +18,6 @@ return new class extends Migration
             "ALTER TABLE review.reviews ADD COLUMN IF NOT EXISTS course_type       VARCHAR(10)",
             "ALTER TABLE review.reviews ADD COLUMN IF NOT EXISTS source            VARCHAR(10)  DEFAULT 'manual'",
             "ALTER TABLE review.reviews ADD COLUMN IF NOT EXISTS parsed_watch_data JSONB",
-            "ALTER TABLE review.reviews ADD COLUMN IF NOT EXISTS strava_activity_id VARCHAR(50)",
             "ALTER TABLE review.reviews ADD COLUMN IF NOT EXISTS gpx_url           TEXT",
             "ALTER TABLE review.reviews ADD COLUMN IF NOT EXISTS is_certified      BOOLEAN NOT NULL DEFAULT false",
         ];
@@ -27,8 +26,6 @@ return new class extends Migration
             DB::statement($sql);
         }
 
-        DB::statement("CREATE INDEX IF NOT EXISTS reviews_strava_idx ON review.reviews (strava_activity_id)");
-
         DB::statement("SELECT pg_notify('pgrst', 'reload schema')");
     }
 
@@ -36,7 +33,7 @@ return new class extends Migration
     {
         $drops = [
             'finish_time', 'course_type', 'source',
-            'parsed_watch_data', 'strava_activity_id', 'gpx_url', 'is_certified',
+            'parsed_watch_data', 'gpx_url', 'is_certified',
         ];
         foreach ($drops as $col) {
             DB::statement("ALTER TABLE review.reviews DROP COLUMN IF EXISTS {$col}");
