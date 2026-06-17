@@ -7,7 +7,9 @@ use App\Models\Race;
 use App\Models\Review;
 use App\Services\ReviewService;
 use App\Services\SummaryService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 
 class ReviewController extends Controller
 {
@@ -74,6 +76,21 @@ class ReviewController extends Controller
 
         return redirect()->route('races.show', $review->race_id)
             ->with('success', '리뷰가 삭제되었습니다.');
+    }
+
+    /** 워치 스크린샷 → CORE API 파싱 프록시 (AJAX) */
+    public function parseWatch(Request $request): JsonResponse
+    {
+        $request->validate([
+            'watch_image' => 'required|file|image|max:10240',
+        ]);
+
+        try {
+            $data = $this->reviewService->parseWatchImage($request->file('watch_image'));
+            return response()->json(['ok' => true, 'data' => $data]);
+        } catch (\Throwable $e) {
+            return response()->json(['ok' => false, 'message' => $e->getMessage()], 422);
+        }
     }
 
     private function authorizeReview(Review $review): void

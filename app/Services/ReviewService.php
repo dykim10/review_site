@@ -43,14 +43,22 @@ class ReviewService
     {
         $imagePaths = $this->uploadImages($validated['images'] ?? []);
 
+        $parsedWatch = isset($validated['parsed_watch_data'])
+            ? json_decode($validated['parsed_watch_data'], true)
+            : null;
+
         $review = Review::create([
-            'race_id'         => $race->id,
-            'race_edition_id' => $validated['race_edition_id'] ?? null,
-            'user_id'         => $user->id,
-            'distance'        => $validated['distance'],
-            'rating'          => $validated['rating'],
-            'content'         => $validated['content'],
-            'image_urls'      => $imagePaths,
+            'race_id'          => $race->id,
+            'race_edition_id'  => $validated['race_edition_id'] ?? null,
+            'user_id'          => $user->id,
+            'distance'         => $validated['distance'],
+            'course_type'      => $validated['course_type'] ?? null,
+            'finish_time'      => $validated['finish_time'] ?? null,
+            'source'           => $validated['source'] ?? 'manual',
+            'parsed_watch_data'=> $parsedWatch,
+            'rating'           => $validated['rating'],
+            'content'          => $validated['content'],
+            'image_urls'       => $imagePaths,
         ]);
 
         $names = $this->hashtagService->parseInput($validated['hashtags'] ?? '');
@@ -75,11 +83,19 @@ class ReviewService
         $newPaths  = $this->uploadImages($validated['images'] ?? []);
         $finalPaths = array_values(array_merge($keepPaths, $newPaths));
 
+        $parsedWatch = isset($validated['parsed_watch_data'])
+            ? json_decode($validated['parsed_watch_data'], true)
+            : null;
+
         $update = [
-            'distance'   => $validated['distance'],
-            'rating'     => $validated['rating'],
-            'content'    => $validated['content'],
-            'image_urls' => $finalPaths,
+            'distance'          => $validated['distance'],
+            'course_type'       => $validated['course_type'] ?? null,
+            'finish_time'       => $validated['finish_time'] ?? null,
+            'source'            => $validated['source'] ?? 'manual',
+            'parsed_watch_data' => $parsedWatch,
+            'rating'            => $validated['rating'],
+            'content'           => $validated['content'],
+            'image_urls'        => $finalPaths,
         ];
         if (array_key_exists('race_edition_id', $validated)) {
             $update['race_edition_id'] = $validated['race_edition_id'];
@@ -152,6 +168,33 @@ class ReviewService
                 Log::warning('CORE API S3 삭제 오류: ' . $e->getMessage());
             }
         }
+    }
+
+    // ─── 워치 스크린샷 파싱 ─────────────────────────────────────
+
+    /**
+     * 워치 스크린샷 → CORE API /api/parse-image → 파싱 결과 반환.
+     * duration_seconds → finish_time(HH:MM:SS) 자동 변환 포함.
+     */
+    public function parseWatchImage(UploadedFile $file): array
+    {
+        $response = Http::timeout(60)
+            ->attach('file', file_get_contents($file->getRealPath()), $file->getClientOriginalName())
+            ->post(config('services.core_api.url') . '/api/parse-image');
+
+        if (!$response->successful()) {
+            throw new \RuntimeException('워치 이미지 파싱에 실패했습니다.');
+        }
+
+        $data = $response->json();
+
+        // duration_seconds → HH:MM:SS
+        if (!empty($data['duration_seconds']) && is_numeric($data['duration_seconds'])) {
+            $s = (int) $data['duration_seconds'];
+            $data['finish_time'] = sprintf('%d:%02d:%02d', intdiv($s, 3600), intdiv($s % 3600, 60), $s % 60);
+        }
+
+        return $data;
     }
 
     // ─── 통계 ─────────────────────────────────────────────────
