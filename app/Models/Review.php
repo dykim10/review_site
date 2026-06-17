@@ -13,15 +13,19 @@ class Review extends Model
         'race_id', 'race_edition_id', 'user_id', 'distance',
         'rating', 'content', 'ai_summary', 'sentiment',
         'image_urls',
+        'finish_time', 'course_type', 'source',
+        'parsed_watch_data', 'strava_activity_id', 'gpx_url', 'is_certified',
     ];
 
     protected function casts(): array
     {
         return [
-            'rating'     => 'integer',
-            'image_urls' => 'array',
-            'created_at' => 'datetime',
-            'updated_at' => 'datetime',
+            'rating'            => 'integer',
+            'image_urls'        => 'array',
+            'parsed_watch_data' => 'array',
+            'is_certified'      => 'boolean',
+            'created_at'        => 'datetime',
+            'updated_at'        => 'datetime',
         ];
     }
 
