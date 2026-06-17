@@ -6,6 +6,7 @@ use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\CompletionRecordController;
 use App\Http\Controllers\Admin\RaceController as AdminRaceController;
 use App\Http\Controllers\Admin\RaceEditionController as AdminRaceEditionController;
+use App\Http\Controllers\Admin\RaceCourseController as AdminRaceCourseController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [RaceController::class, 'index'])->name('home');
@@ -44,6 +45,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'admin'])->group(function () {
     Route::resource('races', AdminRaceController::class);
     Route::resource('race-editions', AdminRaceEditionController::class);
+    Route::resource('race-courses', AdminRaceCourseController::class)->only(['index', 'create', 'store', 'destroy']);
 });
 
 require __DIR__.'/auth.php';
