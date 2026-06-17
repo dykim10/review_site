@@ -527,6 +527,63 @@
             </div>
         @endif
 
+        {{-- YouTube SNS --}}
+        @if(!empty($youtubeItems) && count($youtubeItems) > 0)
+        <div class="info-card" style="margin-bottom:1.5rem;">
+            <div class="card-heading" style="display:flex;align-items:center;gap:0.5rem;">
+                <span style="color:#FF0000;font-size:0.85rem;">▶</span> YouTube
+                <span style="font-size:0.65rem;color:var(--muted);font-weight:400;margin-left:auto;">참가 후기 영상</span>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:0.75rem;">
+                @foreach($youtubeItems as $yt)
+                    <a href="{{ $yt['url'] ?? '#' }}" target="_blank" rel="noopener" style="display:block;border:1px solid var(--border);border-radius:8px;overflow:hidden;transition:border-color 0.2s;" onmouseover="this.style.borderColor='rgba(255,107,53,0.3)'" onmouseout="this.style.borderColor='var(--border)'">
+                        @if(!empty($yt['thumbnail_url']))
+                            <div style="position:relative;aspect-ratio:16/9;overflow:hidden;background:var(--surface2);">
+                                <img src="{{ $yt['thumbnail_url'] }}" alt="" style="width:100%;height:100%;object-fit:cover;" loading="lazy">
+                                <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;">
+                                    <div style="width:36px;height:36px;background:rgba(255,0,0,0.85);border-radius:50%;display:flex;align-items:center;justify-content:center;">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="#fff"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
+                        <div style="padding:0.6rem 0.75rem;">
+                            <div style="font-size:0.78rem;color:var(--text2);font-weight:500;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">{{ $yt['title'] ?? '' }}</div>
+                            @if(!empty($yt['view_count']))
+                                <div style="font-size:0.68rem;color:var(--muted);margin-top:0.3rem;">조회 {{ number_format($yt['view_count']) }}회</div>
+                            @endif
+                        </div>
+                    </a>
+                @endforeach
+            </div>
+        </div>
+        @endif
+
+        {{-- Instagram SNS --}}
+        @if(!empty($instagramItems) && count($instagramItems) > 0)
+        <div class="info-card" style="margin-bottom:1.5rem;">
+            <div class="card-heading" style="display:flex;align-items:center;gap:0.5rem;">
+                <span style="background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-size:0.85rem;">◈</span>
+                Instagram
+                <span style="font-size:0.65rem;color:var(--muted);font-weight:400;margin-left:auto;">참가 후기 게시물</span>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:0.5rem;">
+                @foreach($instagramItems as $ig)
+                    <a href="{{ $ig['permalink'] ?? '#' }}" target="_blank" rel="noopener" style="display:block;aspect-ratio:1;overflow:hidden;border-radius:8px;border:1px solid var(--border);position:relative;" title="{{ mb_substr($ig['caption'] ?? '', 0, 100) }}">
+                        @if(!empty($ig['thumbnail_url']))
+                            <img src="{{ $ig['thumbnail_url'] }}" alt="" style="width:100%;height:100%;object-fit:cover;" loading="lazy">
+                        @else
+                            <div style="width:100%;height:100%;background:var(--surface2);display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:1.5rem;">📷</div>
+                        @endif
+                        @if(!empty($ig['like_count']))
+                            <div style="position:absolute;bottom:4px;left:4px;background:rgba(0,0,0,0.6);border-radius:4px;padding:1px 5px;font-size:0.6rem;color:#fff;">♥ {{ number_format($ig['like_count']) }}</div>
+                        @endif
+                    </a>
+                @endforeach
+            </div>
+        </div>
+        @endif
+
         {{-- Reviews --}}
         <div>
             <div class="section-head">
@@ -816,6 +873,14 @@
                 @endif
             @else
                 <a href="{{ route('login') }}" class="action-btn action-primary">로그인 후 리뷰 작성</a>
+            @endauth
+
+            {{-- 레이스 플랜 버튼 --}}
+            @auth
+                <a href="{{ route('race-plan.create', $race) }}" class="action-btn" style="background:linear-gradient(135deg,rgba(255,107,53,0.15),rgba(255,184,0,0.08));border:1px solid rgba(255,107,53,0.35);color:var(--accent);display:flex;align-items:center;justify-content:center;gap:0.4rem;">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                    AI 레이스 플랜 생성
+                </a>
             @endauth
 
             @if($race->website_url)

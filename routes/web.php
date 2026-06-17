@@ -7,6 +7,7 @@ use App\Http\Controllers\CompletionRecordController;
 use App\Http\Controllers\Admin\RaceController as AdminRaceController;
 use App\Http\Controllers\Admin\RaceEditionController as AdminRaceEditionController;
 use App\Http\Controllers\Admin\RaceCourseController as AdminRaceCourseController;
+use App\Http\Controllers\RacePlanController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [RaceController::class, 'index'])->name('home');
@@ -40,6 +41,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('/reviews/{review}', [ReviewController::class, 'update'])->name('reviews.update');
     Route::delete('/reviews/{review}', [ReviewController::class, 'destroy'])->name('reviews.destroy');
     Route::post('/reviews/parse-watch', [ReviewController::class, 'parseWatch'])->name('reviews.parse-watch');
+
+    // 레이스 플랜
+    Route::get('/races/{race}/race-plan', [RacePlanController::class, 'create'])->name('race-plan.create');
+    Route::post('/races/{race}/race-plan/generate', [RacePlanController::class, 'generate'])->name('race-plan.generate');
 });
 
 // 관리자 - 대회 CRUD
