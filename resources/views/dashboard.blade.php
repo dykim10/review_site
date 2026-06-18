@@ -1,82 +1,62 @@
-<x-app-layout>
+@extends('layouts.review')
+@section('title', '대시보드 — PAC-RUN')
 
+@push('styles')
 <style>
     .dash-wrap { max-width: 1100px; margin: 0 auto; padding: 2.75rem 1.5rem 5rem; }
 
     .dash-welcome {
-        margin-bottom: 2.5rem;
-        padding-bottom: 2rem;
-        border-bottom: 1px solid var(--border);
-        display: flex;
-        align-items: flex-end;
-        justify-content: space-between;
-        flex-wrap: wrap;
-        gap: 1rem;
+        margin-bottom: 2.5rem; padding-bottom: 2rem; border-bottom: 1px solid #E8EAEE;
+        display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 1rem;
     }
     .dash-eyebrow {
-        font-size: 0.68rem; font-weight: 700; letter-spacing: 0.22em;
-        text-transform: uppercase; color: var(--accent); margin-bottom: 0.4rem;
+        font-family: 'Archivo', sans-serif; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.22em;
+        text-transform: uppercase; color: #E80043; margin-bottom: 0.4rem;
     }
-    .dash-title {
-        font-family: 'Bebas Neue', sans-serif;
-        font-size: clamp(2rem, 4vw, 2.8rem);
-        letter-spacing: 0.04em; line-height: 1;
-        color: var(--text);
-    }
-    .dash-sub { font-size: 0.82rem; color: var(--muted); margin-top: 0.45rem; }
+    .dash-title { font-size: clamp(1.6rem, 4vw, 2.2rem); font-weight: 700; letter-spacing: -0.01em; line-height: 1.15; color: #16181D; }
+    .dash-sub { font-size: 0.85rem; color: #5A6170; margin-top: 0.45rem; }
 
     .dash-cta {
-        display: inline-flex; align-items: center; gap: 0.4rem;
-        padding: 0.5rem 1.1rem;
-        background: var(--accent); color: #fff;
-        border-radius: 8px; font-size: 0.82rem; font-weight: 600;
+        display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.55rem 1.1rem;
+        background: #E80043; color: #fff; border-radius: 999px; font-size: 0.82rem; font-weight: 600;
         transition: background 0.15s; white-space: nowrap;
     }
-    .dash-cta:hover { background: var(--accent-d); }
+    .dash-cta:hover { background: #C20038; }
 
     /* ── ACTION CARDS ─────────────────────────────── */
     .action-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 1rem; margin-bottom: 2.5rem; }
     .action-card {
-        display: block;
-        background: var(--surface); border: 1px solid var(--border);
-        border-radius: 12px; padding: 1.4rem;
-        transition: border-color 0.2s, transform 0.15s;
-        position: relative; overflow: hidden;
+        display: block; background: #fff; border: 1px solid #E8EAEE; border-radius: 12px; padding: 1.4rem;
+        transition: border-color 0.2s, transform 0.15s, box-shadow 0.2s; position: relative; overflow: hidden;
     }
     .action-card::before {
-        content: ''; position: absolute;
-        top: 0; left: 0; right: 0; height: 2px;
-        background: var(--accent); opacity: 0;
-        transition: opacity 0.2s;
+        content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+        background: #E80043; opacity: 0; transition: opacity 0.2s;
     }
-    .action-card:hover { border-color: rgba(255,107,53,0.25); transform: translateY(-1px); }
+    .action-card:hover { border-color: rgba(232,0,67,0.3); transform: translateY(-1px); box-shadow: 0 4px 14px rgba(22,24,29,0.06); }
     .action-card:hover::before { opacity: 1; }
     .action-card-icon { font-size: 1.5rem; margin-bottom: 0.85rem; }
-    .action-card-title {
-        font-family: 'Bebas Neue', sans-serif;
-        font-size: 1.05rem; letter-spacing: 0.08em;
-        color: var(--text); margin-bottom: 0.3rem;
-    }
-    .action-card-desc { font-size: 0.74rem; color: var(--muted); line-height: 1.55; }
+    .action-card-title { font-size: 1rem; font-weight: 700; color: #16181D; margin-bottom: 0.3rem; }
+    .action-card-desc { font-size: 0.78rem; color: #5A6170; line-height: 1.55; }
 
     /* ── INFO CARD ────────────────────────────────── */
-    .info-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; }
+    .info-panel { background: #fff; border: 1px solid #E8EAEE; border-radius: 12px; padding: 1.5rem; }
     .info-panel-head {
-        font-size: 0.65rem; font-weight: 700; letter-spacing: 0.16em;
-        text-transform: uppercase; color: var(--muted);
-        margin-bottom: 1.25rem; padding-bottom: 0.75rem;
-        border-bottom: 1px solid var(--border);
+        font-family: 'Archivo', sans-serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.16em;
+        text-transform: uppercase; color: #9AA1AE; margin-bottom: 1.25rem; padding-bottom: 0.75rem; border-bottom: 1px solid #E8EAEE;
     }
     .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem 2rem; }
-    .info-label { font-size: 0.7rem; color: var(--muted); margin-bottom: 0.3rem; letter-spacing: 0.04em; }
-    .info-value { font-size: 0.9rem; color: var(--text2); font-weight: 500; }
+    .info-label { font-size: 0.7rem; color: #9AA1AE; margin-bottom: 0.3rem; letter-spacing: 0.04em; }
+    .info-value { font-size: 0.9rem; color: #16181D; font-weight: 500; }
 
     @media (max-width: 560px) {
         .dash-wrap { padding: 1.75rem 1rem 3rem; }
         .info-grid { grid-template-columns: 1fr; }
     }
 </style>
+@endpush
 
+@section('content')
 <div class="dash-wrap">
 
     {{-- Welcome --}}
@@ -99,10 +79,10 @@
             <div class="action-card-title">대회 검색</div>
             <div class="action-card-desc">마라톤·러닝 대회를 찾아보세요</div>
         </a>
-        <a href="{{ route('races.index', ['status' => '접수중']) }}" class="action-card">
+        <a href="{{ route('races.index') }}#upcoming" class="action-card">
             <div class="action-card-icon">📋</div>
-            <div class="action-card-title">접수 중인 대회</div>
-            <div class="action-card-desc">지금 신청 가능한 대회 목록</div>
+            <div class="action-card-title">다가오는 대회</div>
+            <div class="action-card-desc">곧 개최되는 대회 일정 보기</div>
         </a>
         <a href="{{ route('profile.edit') }}" class="action-card">
             <div class="action-card-icon">👤</div>
@@ -129,7 +109,7 @@
             </div>
             <div>
                 <div class="info-label">이메일 인증</div>
-                <div class="info-value" style="color: {{ auth()->user()->email_verified_at ? '#4ADE80' : '#F87171' }}">
+                <div class="info-value" style="color: {{ auth()->user()->email_verified_at ? '#15803D' : '#DC2626' }}">
                     {{ auth()->user()->email_verified_at ? '인증 완료' : '인증 필요' }}
                 </div>
             </div>
@@ -137,5 +117,4 @@
     </div>
 
 </div>
-
-</x-app-layout>
+@endsection
