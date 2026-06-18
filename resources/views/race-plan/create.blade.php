@@ -1,93 +1,67 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>레이스 플랜 생성 — {{ $race->name }} — PAC-RUN</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Pretendard:wght@300;400;500;600;700&family=Archivo:wght@400;500;600&display=swap" rel="stylesheet">
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-    <style>
-        :root { --bg:#0A0A0A; --s:#141414; --s2:#1C1C1C; --bd:#242424; --acc:#FF6B35; --acc-d:#E85520; --text:#E8E8E8; --t2:#AAAAAA; --mut:#666; }
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: var(--bg); color: var(--text); font-family: 'Pretendard', sans-serif; font-size: 14px; line-height: 1.6; min-height: 100vh; -webkit-font-smoothing: antialiased; }
-        a { text-decoration: none; color: inherit; }
-        .h-bar { position: sticky; top: 0; z-index: 200; height: 54px; display: flex; align-items: center; justify-content: space-between; padding: 0 1.5rem; background: rgba(10,10,10,0.92); backdrop-filter: blur(14px); border-bottom: 1px solid var(--bd); }
-        .h-logo { font-family: 'Bebas Neue', sans-serif; font-size: 1.4rem; letter-spacing: 0.12em; color: var(--acc); }
-        .h-logo span { color: var(--text); }
-        .h-nav { display: flex; align-items: center; gap: 1.25rem; }
-        .h-link { font-size: 0.78rem; color: var(--mut); transition: color 0.15s; }
-        .h-link:hover { color: var(--text); }
-        .h-btn-ghost { padding: 0.3rem 0.85rem; border: 1px solid var(--bd); border-radius: 6px; font-size: 0.78rem; color: var(--mut); background: transparent; cursor: pointer; font-family: 'Pretendard', sans-serif; }
-        .page-wrap { max-width: 600px; margin: 0 auto; padding: 2.5rem 1.5rem 5rem; }
-        .back-link { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; color: var(--mut); margin-bottom: 1.5rem; transition: color 0.15s; }
-        .back-link:hover { color: var(--t2); }
-        .back-link svg { transition: transform 0.15s; }
-        .back-link:hover svg { transform: translateX(-2px); }
-        .form-eyebrow { font-family: 'Archivo', sans-serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--acc); margin-bottom: 0.3rem; }
-        .form-title { font-family: 'Bebas Neue', sans-serif; font-size: 2.5rem; letter-spacing: 0.06em; color: var(--text); line-height: 1; margin-bottom: 0.25rem; }
-        .form-sub { font-size: 0.82rem; color: var(--mut); margin-bottom: 2rem; }
-        .alert-error { background: rgba(248,113,113,0.08); border: 1px solid rgba(248,113,113,0.2); color: #F87171; padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.82rem; margin-bottom: 1.25rem; }
-        .card { background: var(--s); border: 1px solid var(--bd); border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem; }
-        .card-label { font-family: 'Archivo', sans-serif; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--mut); margin-bottom: 1.25rem; padding-bottom: 0.65rem; border-bottom: 1px solid var(--bd); }
-        .field { margin-bottom: 1.3rem; }
-        .field:last-child { margin-bottom: 0; }
-        .fl { display: block; font-size: 0.75rem; font-weight: 600; color: var(--t2); margin-bottom: 0.4rem; }
-        .fl .req { color: var(--acc); }
-        .fl .hint { font-weight: 400; color: var(--mut); font-size: 0.68rem; margin-left: 0.3rem; }
-        .fi { width: 100%; background: var(--bg); border: 1px solid var(--bd); border-radius: 8px; padding: 0.6rem 0.85rem; font-size: 0.88rem; color: var(--text); font-family: 'Pretendard', sans-serif; outline: none; transition: border-color 0.2s; -webkit-appearance: none; }
-        .fi:focus { border-color: var(--acc); }
-        select.fi { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.75rem center; padding-right: 2.2rem; cursor: pointer; }
-        option { background: var(--s2); }
-        .seg-group { display: flex; gap: 0.5rem; }
-        .seg-item { flex: 1; }
-        .seg-item input { position: absolute; opacity: 0; width: 0; height: 0; }
-        .seg-btn { display: block; text-align: center; padding: 0.6rem; border: 1.5px solid var(--bd); border-radius: 8px; font-size: 0.8rem; font-weight: 600; color: var(--mut); cursor: pointer; transition: all 0.15s; }
-        .seg-sub { font-size: 0.62rem; font-family: 'Archivo', sans-serif; display: block; margin-top: 0.1rem; opacity: 0.7; }
-        .seg-item input:checked + .seg-btn { border-color: var(--acc); color: var(--acc); background: rgba(255,107,53,0.08); }
-        .time-row { display: flex; align-items: center; gap: 0.5rem; }
-        .time-inp { width: 64px; text-align: center; font-family: 'Archivo', sans-serif; font-size: 1.1rem; font-weight: 600; background: var(--bg); border: 1.5px solid var(--bd); border-radius: 8px; padding: 0.55rem 0.5rem; color: var(--text); outline: none; transition: border-color 0.2s; -webkit-appearance: none; }
-        .time-inp:focus { border-color: var(--acc); }
-        .time-sep { font-size: 1.2rem; font-weight: 700; color: var(--mut); font-family: 'Archivo', sans-serif; }
-        .time-label { font-size: 0.65rem; color: var(--mut); text-align: center; margin-top: 0.15rem; }
-        .radio-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
-        .radio-card input { position: absolute; opacity: 0; width: 0; height: 0; }
-        .radio-body { display: block; padding: 0.75rem 1rem; border: 1.5px solid var(--bd); border-radius: 8px; cursor: pointer; transition: all 0.15s; }
-        .radio-title { font-size: 0.82rem; font-weight: 600; color: var(--t2); }
-        .radio-desc { font-size: 0.7rem; color: var(--mut); margin-top: 0.15rem; }
-        .radio-card input:checked + .radio-body { border-color: var(--acc); background: rgba(255,107,53,0.06); }
-        .radio-card input:checked + .radio-body .radio-title { color: var(--acc); }
-        .btn-submit { display: flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%; padding: 0.85rem; background: var(--acc); color: #fff; border: none; border-radius: 10px; font-size: 0.95rem; font-weight: 700; cursor: pointer; font-family: 'Pretendard', sans-serif; transition: background 0.15s; margin-top: 1.25rem; }
-        .btn-submit:hover { background: var(--acc-d); }
-        .btn-submit:disabled { opacity: 0.5; cursor: wait; }
-        .loading-overlay { display: none; position: fixed; inset: 0; background: rgba(10,10,10,0.85); backdrop-filter: blur(8px); z-index: 999; flex-direction: column; align-items: center; justify-content: center; gap: 1.25rem; }
-        .loading-overlay.active { display: flex; }
-        .spinner { width: 44px; height: 44px; border: 3px solid var(--bd); border-top-color: var(--acc); border-radius: 50%; animation: spin 0.8s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .loading-text { font-family: 'Bebas Neue', sans-serif; font-size: 1.3rem; letter-spacing: 0.1em; color: var(--t2); }
-        .loading-sub { font-size: 0.78rem; color: var(--mut); }
-        @media (max-width: 560px) { .h-nav .h-link { display: none; } .radio-grid { grid-template-columns: 1fr 1fr; } }
-    </style>
-</head>
-<body>
+@extends('layouts.review')
 
+@section('title', '레이스 플랜 생성 — ' . $race->name . ' — PAC-RUN')
+
+@push('styles')
+<style>
+    :root { --bg:#0A0A0A; --s:#141414; --s2:#1C1C1C; --bd:#242424; --acc:#FF6B35; --acc-d:#E85520; --text:#E8E8E8; --t2:#AAAAAA; --mut:#666; }
+    .page-wrap { max-width: 600px; margin: 0 auto; padding: 2.5rem 1.5rem 5rem; }
+    .back-link { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; color: var(--mut); margin-bottom: 1.5rem; transition: color 0.15s; }
+    .back-link:hover { color: var(--t2); }
+    .back-link svg { transition: transform 0.15s; }
+    .back-link:hover svg { transform: translateX(-2px); }
+    .form-eyebrow { font-family: 'Archivo', sans-serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--acc); margin-bottom: 0.3rem; }
+    .form-title { font-family: 'Bebas Neue', 'Archivo', sans-serif; font-size: 2.5rem; letter-spacing: 0.06em; color: #16181D; line-height: 1; margin-bottom: 0.25rem; }
+    .form-sub { font-size: 0.82rem; color: #5A6170; margin-bottom: 2rem; }
+    .alert-error { background: rgba(248,113,113,0.08); border: 1px solid rgba(248,113,113,0.2); color: #F87171; padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.82rem; margin-bottom: 1.25rem; }
+    .card { background: var(--s); border: 1px solid var(--bd); border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem; }
+    .card-label { font-family: 'Archivo', sans-serif; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--mut); margin-bottom: 1.25rem; padding-bottom: 0.65rem; border-bottom: 1px solid var(--bd); }
+    .field { margin-bottom: 1.3rem; }
+    .field:last-child { margin-bottom: 0; }
+    .fl { display: block; font-size: 0.75rem; font-weight: 600; color: var(--t2); margin-bottom: 0.4rem; }
+    .fl .req { color: var(--acc); }
+    .fl .hint { font-weight: 400; color: var(--mut); font-size: 0.68rem; margin-left: 0.3rem; }
+    .fi { width: 100%; background: var(--bg); border: 1px solid var(--bd); border-radius: 8px; padding: 0.6rem 0.85rem; font-size: 0.88rem; color: var(--text); font-family: 'Pretendard', sans-serif; outline: none; transition: border-color 0.2s; -webkit-appearance: none; }
+    .fi:focus { border-color: var(--acc); }
+    select.fi { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.75rem center; padding-right: 2.2rem; cursor: pointer; }
+    option { background: var(--s2); }
+    .seg-group { display: flex; gap: 0.5rem; }
+    .seg-item { flex: 1; }
+    .seg-item input { position: absolute; opacity: 0; width: 0; height: 0; }
+    .seg-btn { display: block; text-align: center; padding: 0.6rem; border: 1.5px solid var(--bd); border-radius: 8px; font-size: 0.8rem; font-weight: 600; color: var(--mut); cursor: pointer; transition: all 0.15s; }
+    .seg-sub { font-size: 0.62rem; font-family: 'Archivo', sans-serif; display: block; margin-top: 0.1rem; opacity: 0.7; }
+    .seg-item input:checked + .seg-btn { border-color: var(--acc); color: var(--acc); background: rgba(255,107,53,0.08); }
+    .time-row { display: flex; align-items: center; gap: 0.5rem; }
+    .time-inp { width: 64px; text-align: center; font-family: 'Archivo', sans-serif; font-size: 1.1rem; font-weight: 600; background: var(--bg); border: 1.5px solid var(--bd); border-radius: 8px; padding: 0.55rem 0.5rem; color: var(--text); outline: none; transition: border-color 0.2s; -webkit-appearance: none; }
+    .time-inp:focus { border-color: var(--acc); }
+    .time-sep { font-size: 1.2rem; font-weight: 700; color: var(--mut); font-family: 'Archivo', sans-serif; }
+    .time-label { font-size: 0.65rem; color: var(--mut); text-align: center; margin-top: 0.15rem; }
+    .radio-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+    .radio-card input { position: absolute; opacity: 0; width: 0; height: 0; }
+    .radio-body { display: block; padding: 0.75rem 1rem; border: 1.5px solid var(--bd); border-radius: 8px; cursor: pointer; transition: all 0.15s; }
+    .radio-title { font-size: 0.82rem; font-weight: 600; color: var(--t2); }
+    .radio-desc { font-size: 0.7rem; color: var(--mut); margin-top: 0.15rem; }
+    .radio-card input:checked + .radio-body { border-color: var(--acc); background: rgba(255,107,53,0.06); }
+    .radio-card input:checked + .radio-body .radio-title { color: var(--acc); }
+    .btn-submit { display: flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%; padding: 0.85rem; background: var(--acc); color: #fff; border: none; border-radius: 10px; font-size: 0.95rem; font-weight: 700; cursor: pointer; font-family: 'Pretendard', sans-serif; transition: background 0.15s; margin-top: 1.25rem; }
+    .btn-submit:hover { background: var(--acc-d); }
+    .btn-submit:disabled { opacity: 0.5; cursor: wait; }
+    .loading-overlay { display: none; position: fixed; inset: 0; background: rgba(10,10,10,0.85); backdrop-filter: blur(8px); z-index: 999; flex-direction: column; align-items: center; justify-content: center; gap: 1.25rem; }
+    .loading-overlay.active { display: flex; }
+    .spinner { width: 44px; height: 44px; border: 3px solid var(--bd); border-top-color: var(--acc); border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text { font-family: 'Bebas Neue', 'Archivo', sans-serif; font-size: 1.3rem; letter-spacing: 0.1em; color: var(--t2); }
+    .loading-sub { font-size: 0.78rem; color: var(--mut); }
+    @media (max-width: 560px) { .radio-grid { grid-template-columns: 1fr 1fr; } }
+</style>
+@endpush
+
+@section('content')
 <div class="loading-overlay" id="loading">
     <div class="spinner"></div>
     <div class="loading-text">레이스 플랜 생성 중</div>
     <div class="loading-sub">AI가 코스 · 날씨 · 유사 케이스를 분석하고 있습니다 (10~20초)</div>
 </div>
-
-<header class="h-bar">
-    <a href="{{ route('home') }}" class="h-logo">PAC<span>-RUN</span></a>
-    <nav class="h-nav">
-        <a href="{{ route('races.index') }}" class="h-link">대회</a>
-        @auth
-            <form method="POST" action="{{ route('logout') }}" style="display:inline">
-                @csrf <button type="submit" class="h-btn-ghost">로그아웃</button>
-            </form>
-        @endauth
-    </nav>
-</header>
 
 <div class="page-wrap">
     <a href="{{ route('races.show', $race) }}" class="back-link">
@@ -216,12 +190,13 @@
         </button>
     </form>
 </div>
+@endsection
 
+@push('scripts')
 <script>
 document.getElementById('plan-form').addEventListener('submit', function () {
     document.getElementById('submit-btn').disabled = true;
     document.getElementById('loading').classList.add('active');
 });
 </script>
-</body>
-</html>
+@endpush

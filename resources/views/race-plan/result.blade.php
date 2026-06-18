@@ -1,115 +1,89 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>레이스 플랜 — {{ $plan['race_name'] ?? $race->name }} — PAC-RUN</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Pretendard:wght@300;400;500;600;700&family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet">
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-    <style>
-        :root { --bg:#0A0A0A; --s:#141414; --s2:#1C1C1C; --bd:#242424; --acc:#FF6B35; --acc-d:#E85520; --text:#E8E8E8; --t2:#AAAAAA; --mut:#666; --green:#4ADE80; --blue:#60A5FA; }
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: var(--bg); color: var(--text); font-family: 'Pretendard', sans-serif; font-size: 14px; line-height: 1.6; min-height: 100vh; -webkit-font-smoothing: antialiased; }
-        a { text-decoration: none; color: inherit; }
-        .h-bar { position: sticky; top: 0; z-index: 200; height: 54px; display: flex; align-items: center; justify-content: space-between; padding: 0 1.5rem; background: rgba(10,10,10,0.92); backdrop-filter: blur(14px); border-bottom: 1px solid var(--bd); }
-        .h-logo { font-family: 'Bebas Neue', sans-serif; font-size: 1.4rem; letter-spacing: 0.12em; color: var(--acc); }
-        .h-logo span { color: var(--text); }
-        .h-nav { display: flex; align-items: center; gap: 1.25rem; }
-        .h-link { font-size: 0.78rem; color: var(--mut); transition: color 0.15s; }
-        .h-link:hover { color: var(--text); }
-        .h-btn-ghost { padding: 0.3rem 0.85rem; border: 1px solid var(--bd); border-radius: 6px; font-size: 0.78rem; color: var(--mut); background: transparent; cursor: pointer; font-family: 'Pretendard', sans-serif; }
+@extends('layouts.review')
 
-        /* ── HERO ── */
-        .plan-hero { border-bottom: 1px solid var(--bd); padding: 2.5rem 1.5rem 2rem; background: radial-gradient(ellipse 60% 50% at 0% 0%, rgba(255,107,53,0.08), transparent 65%), var(--bg); }
-        .plan-hero-inner { max-width: 860px; margin: 0 auto; }
-        .back-link { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; color: var(--mut); margin-bottom: 1.5rem; transition: color 0.15s; }
-        .back-link:hover { color: var(--t2); }
-        .back-link svg { transition: transform 0.15s; }
-        .back-link:hover svg { transform: translateX(-2px); }
-        .hero-eyebrow { font-family: 'Archivo', sans-serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--acc); margin-bottom: 0.35rem; }
-        .hero-race { font-family: 'Bebas Neue', sans-serif; font-size: clamp(2rem,5vw,3.5rem); letter-spacing: 0.04em; color: var(--text); line-height: 1; margin-bottom: 0.75rem; }
-        .hero-meta { display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; font-size: 0.82rem; color: var(--t2); }
-        .hero-meta-item { display: flex; align-items: center; gap: 0.4rem; }
-        .goal-badge { font-family: 'Archivo', sans-serif; font-size: 1.4rem; font-weight: 700; color: var(--acc); letter-spacing: 0.04em; }
+@section('title', '레이스 플랜 — ' . ($plan['race_name'] ?? $race->name) . ' — PAC-RUN')
 
-        /* ── PAGE LAYOUT ── */
-        .page-wrap { max-width: 860px; margin: 0 auto; padding: 2rem 1.5rem 5rem; }
+@push('styles')
+<style>
+    :root { --bg:#0A0A0A; --s:#141414; --s2:#1C1C1C; --bd:#242424; --acc:#FF6B35; --acc-d:#E85520; --text:#E8E8E8; --t2:#AAAAAA; --mut:#666; --green:#4ADE80; --blue:#60A5FA; }
 
-        /* ── SECTION ── */
-        .section { margin-bottom: 1.5rem; }
-        .section-title { font-family: 'Archivo', sans-serif; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--mut); margin-bottom: 1rem; padding-bottom: 0.65rem; border-bottom: 1px solid var(--bd); }
-        .card { background: var(--s); border: 1px solid var(--bd); border-radius: 12px; padding: 1.4rem 1.5rem; }
+    /* ── HERO ── */
+    .plan-hero { border-bottom: 1px solid var(--bd); padding: 2.5rem 1.5rem 2rem; background: radial-gradient(ellipse 60% 50% at 0% 0%, rgba(255,107,53,0.08), transparent 65%), var(--bg); }
+    .plan-hero-inner { max-width: 860px; margin: 0 auto; }
+    .back-link { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; color: var(--mut); margin-bottom: 1.5rem; transition: color 0.15s; }
+    .back-link:hover { color: var(--t2); }
+    .back-link svg { transition: transform 0.15s; }
+    .back-link:hover svg { transform: translateX(-2px); }
+    .hero-eyebrow { font-family: 'Archivo', sans-serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--acc); margin-bottom: 0.35rem; }
+    .hero-race { font-family: 'Bebas Neue', 'Archivo', sans-serif; font-size: clamp(2rem,5vw,3.5rem); letter-spacing: 0.04em; color: var(--text); line-height: 1; margin-bottom: 0.75rem; }
+    .hero-meta { display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; font-size: 0.82rem; color: var(--t2); }
+    .hero-meta-item { display: flex; align-items: center; gap: 0.4rem; }
+    .goal-badge { font-family: 'Archivo', sans-serif; font-size: 1.4rem; font-weight: 700; color: var(--acc); letter-spacing: 0.04em; }
 
-        /* ── WEATHER ── */
-        .weather-grid { display: flex; flex-wrap: wrap; gap: 0.6rem; }
-        .weather-chip { background: var(--s2); border: 1px solid var(--bd); border-radius: 8px; padding: 0.5rem 0.85rem; font-size: 0.8rem; color: var(--t2); }
-        .weather-assessment { font-size: 0.88rem; color: var(--t2); line-height: 1.7; margin-top: 0.85rem; }
+    /* ── PAGE LAYOUT ── */
+    .page-wrap { max-width: 860px; margin: 0 auto; padding: 2rem 1.5rem 5rem; }
 
-        /* ── STRATEGY ── */
-        .strategy-text { font-size: 0.9rem; color: var(--t2); line-height: 1.8; }
+    /* ── SECTION ── */
+    .section { margin-bottom: 1.5rem; }
+    .section-title { font-family: 'Archivo', sans-serif; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--mut); margin-bottom: 1rem; padding-bottom: 0.65rem; border-bottom: 1px solid var(--bd); }
+    .card { background: var(--s); border: 1px solid var(--bd); border-radius: 12px; padding: 1.4rem 1.5rem; }
 
-        /* ── PACE TABLE ── */
-        .pace-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
-        .pace-table thead tr { border-bottom: 1px solid var(--bd); }
-        .pace-table th { text-align: left; padding: 0.4rem 0.6rem; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--mut); }
-        .pace-table td { padding: 0.65rem 0.6rem; border-bottom: 1px solid rgba(36,36,36,0.5); color: var(--t2); vertical-align: top; }
-        .pace-table tbody tr:last-child td { border-bottom: none; }
-        .pace-val { font-family: 'Archivo', sans-serif; font-size: 0.95rem; font-weight: 700; color: var(--acc); }
-        .cumul-val { font-family: 'Archivo', sans-serif; font-size: 0.82rem; color: var(--t2); }
-        .seg-note { font-size: 0.78rem; color: var(--mut); line-height: 1.5; }
+    /* ── WEATHER ── */
+    .weather-grid { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+    .weather-chip { background: var(--s2); border: 1px solid var(--bd); border-radius: 8px; padding: 0.5rem 0.85rem; font-size: 0.8rem; color: var(--t2); }
+    .weather-assessment { font-size: 0.88rem; color: var(--t2); line-height: 1.7; margin-top: 0.85rem; }
 
-        /* ── ATTENTION SEGMENTS ── */
-        .attn-list { display: flex; flex-direction: column; gap: 0.75rem; }
-        .attn-item { background: rgba(248,113,113,0.04); border: 1px solid rgba(248,113,113,0.15); border-radius: 8px; padding: 1rem 1.1rem; }
-        .attn-seg { font-family: 'Archivo', sans-serif; font-size: 0.8rem; font-weight: 700; color: #F87171; margin-bottom: 0.3rem; }
-        .attn-reason { font-size: 0.82rem; color: var(--t2); margin-bottom: 0.3rem; }
-        .attn-tip { font-size: 0.78rem; color: var(--mut); }
-        .attn-tip::before { content: '💡 '; }
+    /* ── STRATEGY ── */
+    .strategy-text { font-size: 0.9rem; color: var(--t2); line-height: 1.8; }
 
-        /* ── NUTRITION ── */
-        .nutrition-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-        .nutrition-item { }
-        .nutrition-key { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em; color: var(--mut); text-transform: uppercase; margin-bottom: 0.4rem; font-family: 'Archivo', sans-serif; }
-        .nutrition-val { font-size: 0.82rem; color: var(--t2); line-height: 1.6; }
-        .gel-chips { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.35rem; }
-        .gel-chip { font-family: 'Archivo', sans-serif; font-size: 0.75rem; font-weight: 600; padding: 0.2rem 0.6rem; background: rgba(96,165,250,0.1); border: 1px solid rgba(96,165,250,0.2); color: var(--blue); border-radius: 4px; }
+    /* ── PACE TABLE ── */
+    .pace-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    .pace-table thead tr { border-bottom: 1px solid var(--bd); }
+    .pace-table th { text-align: left; padding: 0.4rem 0.6rem; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--mut); }
+    .pace-table td { padding: 0.65rem 0.6rem; border-bottom: 1px solid rgba(36,36,36,0.5); color: var(--t2); vertical-align: top; }
+    .pace-table tbody tr:last-child td { border-bottom: none; }
+    .pace-val { font-family: 'Archivo', sans-serif; font-size: 0.95rem; font-weight: 700; color: var(--acc); }
+    .cumul-val { font-family: 'Archivo', sans-serif; font-size: 0.82rem; color: var(--t2); }
+    .seg-note { font-size: 0.78rem; color: var(--mut); line-height: 1.5; }
 
-        /* ── HEART RATE ── */
-        .hr-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-bottom: 0.85rem; }
-        .hr-item { background: var(--s2); border-radius: 8px; padding: 0.75rem; text-align: center; }
-        .hr-label { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.08em; color: var(--mut); text-transform: uppercase; font-family: 'Archivo', sans-serif; margin-bottom: 0.35rem; }
-        .hr-val { font-family: 'Archivo', sans-serif; font-size: 1.05rem; font-weight: 700; color: var(--green); }
-        .hr-advice { font-size: 0.82rem; color: var(--mut); line-height: 1.65; }
+    /* ── ATTENTION SEGMENTS ── */
+    .attn-list { display: flex; flex-direction: column; gap: 0.75rem; }
+    .attn-item { background: rgba(248,113,113,0.04); border: 1px solid rgba(248,113,113,0.15); border-radius: 8px; padding: 1rem 1.1rem; }
+    .attn-seg { font-family: 'Archivo', sans-serif; font-size: 0.8rem; font-weight: 700; color: #F87171; margin-bottom: 0.3rem; }
+    .attn-reason { font-size: 0.82rem; color: var(--t2); margin-bottom: 0.3rem; }
+    .attn-tip { font-size: 0.78rem; color: var(--mut); }
+    .attn-tip::before { content: '💡 '; }
 
-        /* ── RAG BASIS ── */
-        .rag-badge { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.75rem; color: var(--t2); background: var(--s2); border: 1px solid var(--bd); border-radius: 6px; padding: 0.35rem 0.75rem; margin-bottom: 0.75rem; }
-        .rag-summary { font-size: 0.82rem; color: var(--mut); line-height: 1.7; }
+    /* ── NUTRITION ── */
+    .nutrition-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .nutrition-item { }
+    .nutrition-key { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em; color: var(--mut); text-transform: uppercase; margin-bottom: 0.4rem; font-family: 'Archivo', sans-serif; }
+    .nutrition-val { font-size: 0.82rem; color: var(--t2); line-height: 1.6; }
+    .gel-chips { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.35rem; }
+    .gel-chip { font-family: 'Archivo', sans-serif; font-size: 0.75rem; font-weight: 600; padding: 0.2rem 0.6rem; background: rgba(96,165,250,0.1); border: 1px solid rgba(96,165,250,0.2); color: var(--blue); border-radius: 4px; }
 
-        /* ── ACTIONS ── */
-        .action-row { display: flex; gap: 0.75rem; margin-top: 1.5rem; flex-wrap: wrap; }
-        .btn-again { padding: 0.65rem 1.4rem; background: transparent; border: 1.5px solid var(--acc); color: var(--acc); border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; font-family: 'Pretendard', sans-serif; transition: all 0.15s; }
-        .btn-again:hover { background: rgba(255,107,53,0.08); }
-        .btn-race { padding: 0.65rem 1.4rem; background: var(--acc); color: #fff; border: none; border-radius: 8px; font-size: 0.85rem; font-weight: 600; font-family: 'Pretendard', sans-serif; transition: background 0.15s; }
-        .btn-race:hover { background: var(--acc-d); }
+    /* ── HEART RATE ── */
+    .hr-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-bottom: 0.85rem; }
+    .hr-item { background: var(--s2); border-radius: 8px; padding: 0.75rem; text-align: center; }
+    .hr-label { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.08em; color: var(--mut); text-transform: uppercase; font-family: 'Archivo', sans-serif; margin-bottom: 0.35rem; }
+    .hr-val { font-family: 'Archivo', sans-serif; font-size: 1.05rem; font-weight: 700; color: var(--green); }
+    .hr-advice { font-size: 0.82rem; color: var(--mut); line-height: 1.65; }
 
-        @media (max-width: 620px) { .h-nav .h-link { display: none; } .nutrition-grid { grid-template-columns: 1fr; } .hr-grid { grid-template-columns: 1fr 1fr; } }
-    </style>
-</head>
-<body>
+    /* ── RAG BASIS ── */
+    .rag-badge { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.75rem; color: var(--t2); background: var(--s2); border: 1px solid var(--bd); border-radius: 6px; padding: 0.35rem 0.75rem; margin-bottom: 0.75rem; }
+    .rag-summary { font-size: 0.82rem; color: var(--mut); line-height: 1.7; }
 
-<header class="h-bar">
-    <a href="{{ route('home') }}" class="h-logo">PAC<span>-RUN</span></a>
-    <nav class="h-nav">
-        <a href="{{ route('races.index') }}" class="h-link">대회</a>
-        @auth
-            <form method="POST" action="{{ route('logout') }}" style="display:inline">
-                @csrf <button type="submit" class="h-btn-ghost">로그아웃</button>
-            </form>
-        @endauth
-    </nav>
-</header>
+    /* ── ACTIONS ── */
+    .action-row { display: flex; gap: 0.75rem; margin-top: 1.5rem; flex-wrap: wrap; }
+    .btn-again { padding: 0.65rem 1.4rem; background: transparent; border: 1.5px solid var(--acc); color: var(--acc); border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; font-family: 'Pretendard', sans-serif; transition: all 0.15s; }
+    .btn-again:hover { background: rgba(255,107,53,0.08); }
+    .btn-race { padding: 0.65rem 1.4rem; background: var(--acc); color: #fff; border: none; border-radius: 8px; font-size: 0.85rem; font-weight: 600; font-family: 'Pretendard', sans-serif; transition: background 0.15s; }
+    .btn-race:hover { background: var(--acc-d); }
 
+    @media (max-width: 620px) { .nutrition-grid { grid-template-columns: 1fr; } .hr-grid { grid-template-columns: 1fr 1fr; } }
+</style>
+@endpush
+
+@section('content')
 <section class="plan-hero">
     <div class="plan-hero-inner">
         <a href="{{ route('races.show', $race) }}" class="back-link">
@@ -292,6 +266,4 @@
     </div>
 
 </div>
-
-</body>
-</html>
+@endsection
