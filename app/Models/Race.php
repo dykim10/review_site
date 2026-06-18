@@ -90,70 +90,104 @@ class Race extends Model
     // ─── Static Methods ───────────────────────────────────────
 
     /**
-     * 대회 목록 + 리뷰 수 / 평균 평점 JOIN.
-     * race_editions LATERAL JOIN으로 최신 edition의 날짜·상태·장소·참가비를 함께 반환.
+     * 전체 대회 수 / 누적 리뷰 수 / 리뷰 있는 대회 수 (필터 없는 전역 통계).
+     * 목록 히어로 통계 카드용 — 페이지네이션된 목록과 별개로 집계.
      */
-    public static function listWithReviewStats(
-        array $filters = [],
-        int $perPage = 20,
-        int $page = 1,
-    ): \Illuminate\Pagination\LengthAwarePaginator {
-        $city    = $filters['city']     ?? null;
-        $status  = $filters['status']   ?? null;
-        $waLabel = $filters['wa_label'] ?? null;
-
-        $where = "WHERE r.is_active = true"
-            . ($city    ? " AND r.city = :city"         : '')
-            . ($status  ? " AND ed.status = :status"    : '')
-            . ($waLabel ? " AND r.wa_label = :wa_label" : '');
-
-        $bindings = [];
-        if ($city)    $bindings['city']     = $city;
-        if ($status)  $bindings['status']   = $status;
-        if ($waLabel) $bindings['wa_label'] = $waLabel;
-
-        $total = DB::selectOne(
-            "SELECT COUNT(*) AS cnt
+    public static function globalStats(): array
+    {
+        $row = DB::selectOne(
+            "SELECT
+                COUNT(DISTINCT r.id) AS total_races,
+                COUNT(rv.id) AS total_reviews,
+                COUNT(DISTINCT rv.race_id) AS races_with_reviews
              FROM review.races r
-             LEFT JOIN LATERAL (
-                 SELECT race_date, status, location, entry_fee
-                 FROM review.race_editions
-                 WHERE race_id = r.id
-                 ORDER BY year DESC NULLS LAST
-                 LIMIT 1
-             ) ed ON true
-             $where",
-            $bindings
-        )->cnt;
+             LEFT JOIN review.reviews rv ON rv.race_id = r.id
+             WHERE r.is_active = true"
+        );
 
-        $offset = ($page - 1) * $perPage;
-        $rows   = DB::select(
+        return [
+            'total_races'        => (int) $row->total_races,
+            'total_reviews'      => (int) $row->total_reviews,
+            'races_with_reviews' => (int) $row->races_with_reviews,
+        ];
+    }
+
+    /**
+     * 대회 목록 — 다가오는 대회 / 지난 대회 리뷰 2단 구조 (TASK-1).
+     * 최신 에디션 연도 >= 올해 → 다가오는 대회, 그 외(과거 연도·에디션 없음) → 지난 대회.
+     * '접수 상태' 필터는 폐기, 국내외/공인등급/연도/리뷰유무로 대체.
+     */
+    public static function sectionedList(array $filters = []): array
+    {
+        $isDomestic = $filters['is_domestic'] ?? null; // '1' | '0' | null
+        $waLabel    = $filters['wa_label']    ?? null;  // platinum|gold|elite|label
+        $year       = $filters['year']        ?? null;
+        $hasReview  = $filters['has_review']  ?? null;
+
+        $where    = "WHERE r.is_active = true";
+        $bindings = [];
+
+        if ($isDomestic !== null && $isDomestic !== '') {
+            $where .= " AND r.is_domestic = :is_domestic";
+            $bindings['is_domestic'] = (bool) $isDomestic;
+        }
+        if ($waLabel) {
+            $where .= " AND r.wa_label = :wa_label";
+            $bindings['wa_label'] = $waLabel;
+        }
+        if ($year) {
+            $where .= " AND ed.year = :year";
+            $bindings['year'] = $year;
+        }
+
+        $having = $hasReview ? "HAVING COUNT(rv.id) > 0" : "";
+
+        $rows = DB::select(
             "SELECT r.*,
+                    ed.year AS latest_edition_year,
+                    ed.race_date, ed.status, ed.location, ed.entry_fee,
                     COUNT(rv.id) AS review_count,
-                    ROUND(AVG(rv.rating)::numeric, 1) AS avg_rating,
-                    ed.race_date, ed.status, ed.location, ed.entry_fee
+                    ROUND(AVG(rv.rating)::numeric, 1) AS avg_rating
              FROM review.races r
              LEFT JOIN review.reviews rv ON rv.race_id = r.id
              LEFT JOIN LATERAL (
-                 SELECT race_date, status, location, entry_fee
+                 SELECT year, race_date, status, location, entry_fee
                  FROM review.race_editions
                  WHERE race_id = r.id
                  ORDER BY year DESC NULLS LAST
                  LIMIT 1
              ) ed ON true
              $where
-             GROUP BY r.id, ed.race_date, ed.status, ed.location, ed.entry_fee
-             ORDER BY ed.race_date DESC NULLS LAST
-             LIMIT :limit OFFSET :offset",
-            array_merge($bindings, ['limit' => $perPage, 'offset' => $offset])
+             GROUP BY r.id, ed.year, ed.race_date, ed.status, ed.location, ed.entry_fee
+             $having",
+            $bindings
         );
 
-        return new \Illuminate\Pagination\LengthAwarePaginator(
-            collect($rows),
-            (int) $total,
-            $perPage,
-            $page,
-            ['path' => \Illuminate\Pagination\Paginator::resolveCurrentPath()]
-        );
+        $currentYear = now()->year;
+        $rows        = collect($rows);
+
+        $upcoming = $rows
+            ->filter(fn ($r) => $r->latest_edition_year !== null && $r->latest_edition_year >= $currentYear)
+            ->sortBy('latest_edition_year')
+            ->values();
+
+        $past = $rows
+            ->filter(fn ($r) => $r->latest_edition_year === null || $r->latest_edition_year < $currentYear)
+            ->sort(function ($a, $b) {
+                $yearCmp = ($b->latest_edition_year ?? 0) <=> ($a->latest_edition_year ?? 0);
+                return $yearCmp !== 0 ? $yearCmp : ($b->review_count <=> $a->review_count);
+            })
+            ->values();
+
+        $years = collect(DB::select(
+            "SELECT ed.year, COUNT(*) AS cnt
+             FROM review.race_editions ed
+             JOIN review.races r ON r.id = ed.race_id
+             WHERE r.is_active = true AND ed.year IS NOT NULL
+             GROUP BY ed.year
+             ORDER BY ed.year DESC"
+        ));
+
+        return ['upcoming' => $upcoming, 'past' => $past, 'years' => $years];
     }
 }

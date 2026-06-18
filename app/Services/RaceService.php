@@ -31,9 +31,16 @@ class RaceService
             ->paginate($perPage);
     }
 
-    public function getPublicListWithStats(array $filters, int $perPage = 20): LengthAwarePaginator
+    /** 대회 목록 — 다가오는 대회 / 지난 대회 리뷰 2단 구조 + 연도 집계 (TASK-1) */
+    public function getSectionedList(array $filters): array
     {
-        return Race::listWithReviewStats($filters, $perPage, request()->integer('page', 1));
+        return Race::sectionedList($filters);
+    }
+
+    /** 히어로 통계 카드용 — 전체 대회/누적 리뷰/리뷰 있는 대회 수 (필터 무관 전역 집계) */
+    public function getGlobalStats(): array
+    {
+        return Race::globalStats();
     }
 
     // ─── 관리자용 ─────────────────────────────────────────────

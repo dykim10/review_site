@@ -21,8 +21,17 @@ class RaceController extends Controller
 
     public function index(Request $request)
     {
-        $races = $this->raceService->getPublicListWithStats($request->only('city', 'status', 'wa_label'));
-        return view('races.index', compact('races'));
+        $filters  = $request->only('is_domestic', 'wa_label', 'year', 'has_review');
+        $sections = $this->raceService->getSectionedList($filters);
+        $stats    = $this->raceService->getGlobalStats();
+
+        return view('races.index', [
+            'upcoming' => $sections['upcoming'],
+            'past'     => $sections['past'],
+            'years'    => $sections['years'],
+            'stats'    => $stats,
+            'filters'  => $filters,
+        ]);
     }
 
     public function show(Race $race)
