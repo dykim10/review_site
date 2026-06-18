@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Race;
 use App\Models\RaceEdition;
 use App\Models\RaceWeather;
 use Illuminate\Support\Facades\Http;
