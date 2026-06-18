@@ -49,6 +49,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 // 관리자 - 대회 CRUD
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'admin'])->group(function () {
+    Route::get('/', fn () => redirect()->route('admin.races.index'))->name('home');
     Route::resource('races', AdminRaceController::class);
     Route::resource('race-editions', AdminRaceEditionController::class);
     Route::resource('race-courses', AdminRaceCourseController::class)->only(['index', 'create', 'store', 'destroy']);

@@ -1,5 +1,7 @@
 # REVIEW 프로젝트 - Claude Code 지침
 
+@C:\Users\dykim\.claude\plugins\marketplaces\claude-plugins-official\plugins\frontend-design\skills\frontend-design\SKILL.md
+
 > 마라톤 / 러닝 대회 리뷰 플랫폼
 > 공통 정의서 참고: ./project-definition.md
 
