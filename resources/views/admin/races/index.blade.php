@@ -10,6 +10,47 @@
 @endsection
 
 @section('content')
+    {{-- WA Label Road Races 수동 동기화 (운영: Swagger 대신 admin) --}}
+    <div class="adm-form-card" style="margin-bottom:1.25rem;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
+            <div>
+                <div style="font-weight:700;font-size:0.95rem;margin-bottom:0.35rem;">World Athletics Label Road Races</div>
+                <p style="margin:0;color:#6B7280;font-size:0.8rem;line-height:1.5;max-width:520px;">
+                    공식 GraphQL 캘린더 기준 시즌별 공인 대회를 <code>races</code> 카탈로그에 반영합니다.
+                    <code>race_editions</code>는 생성하지 않습니다. 시즌마다 1회 실행 (2024 → 2025 → 2026 순 백필 권장).
+                </p>
+            </div>
+        </div>
+
+        <form method="POST" action="{{ route('admin.wa-label.sync') }}" style="margin-top:1.1rem;display:flex;flex-wrap:wrap;align-items:flex-end;gap:0.75rem;"
+              onsubmit="return confirm('선택 시즌 WA Label 목록을 DB에 동기화합니다. 계속할까요?')">
+            @csrf
+            <div class="adm-field" style="margin:0;min-width:120px;">
+                <label class="adm-label" for="wa-year">시즌 (season)</label>
+                <select id="wa-year" name="year" class="adm-input" required>
+                    @foreach ([2026, 2025, 2024, 2023, 2022] as $y)
+                        <option value="{{ $y }}" @selected($y === (int) date('Y'))>{{ $y }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <label style="display:flex;align-items:center;gap:0.35rem;font-size:0.8rem;color:#4B5563;padding-bottom:0.55rem;">
+                <input type="checkbox" name="translate" value="1"> 한국어 번역 (Haiku)
+            </label>
+            <label style="display:flex;align-items:center;gap:0.35rem;font-size:0.8rem;color:#4B5563;padding-bottom:0.55rem;">
+                <input type="checkbox" name="organiser" value="1"> 주최/공식 URL
+            </label>
+            <button type="submit" class="adm-btn adm-btn-primary">동기화 실행</button>
+        </form>
+
+        <form method="POST" action="{{ route('admin.wa-label.preview') }}" style="margin-top:0.75rem;display:inline;">
+            @csrf
+            <input type="hidden" name="year" id="wa-preview-year" value="{{ date('Y') }}">
+            <button type="submit" class="adm-btn adm-btn-ghost" onclick="document.getElementById('wa-preview-year').value=document.getElementById('wa-year').value">
+                목록 건수만 미리보기 (DB 변경 없음)
+            </button>
+        </form>
+    </div>
+
     <div class="adm-card">
         <table class="adm-table">
             <thead>

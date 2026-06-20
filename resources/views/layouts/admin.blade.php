@@ -148,6 +148,9 @@
                 @if(session('success'))
                     <div class="adm-alert-success">{{ session('success') }}</div>
                 @endif
+                @if(session('error'))
+                    <div class="adm-alert-error">{{ session('error') }}</div>
+                @endif
                 @if($errors->any())
                     <div class="adm-alert-error">
                         <ul>@foreach($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul>

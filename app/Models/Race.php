@@ -14,7 +14,7 @@ class Race extends Model
         'name', 'name_en', 'city', 'organizer', 'distances',
         'website_url', 'official_url', 'is_active',
         'ai_race_summary', 'wa_label', 'is_certified',
-        'is_domestic', 'country',
+        'is_domestic', 'country', 'wa_calendar',
     ];
 
     protected function casts(): array
@@ -23,6 +23,7 @@ class Race extends Model
             'is_active'       => 'boolean',
             'is_certified'    => 'boolean',
             'is_domestic'     => 'boolean',
+            'wa_calendar'     => 'array',
             'ai_race_summary' => 'array',
         ];
     }
