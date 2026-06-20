@@ -9,7 +9,7 @@ class RaceWeather extends Model
     protected $table = 'review.race_weather';
 
     protected $fillable = [
-        'race_id', 'stn_id', 'temperature', 'humidity',
+        'race_edition_id', 'stn_id', 'temperature', 'humidity',
         'wind_speed', 'wind_direction', 'precipitation',
         'weather_condition', 'raw_data', 'fetched_at',
     ];
@@ -17,18 +17,18 @@ class RaceWeather extends Model
     protected function casts(): array
     {
         return [
-            'temperature'   => 'float',
-            'humidity'      => 'float',
-            'wind_speed'    => 'float',
-            'wind_direction'=> 'float',
-            'precipitation' => 'float',
-            'raw_data'      => 'array',
-            'fetched_at'    => 'datetime',
+            'temperature'    => 'float',
+            'humidity'       => 'float',
+            'wind_speed'     => 'float',
+            'wind_direction' => 'float',
+            'precipitation'  => 'float',
+            'raw_data'       => 'array',
+            'fetched_at'     => 'datetime',
         ];
     }
 
-    public function race()
+    public function raceEdition()
     {
-        return $this->belongsTo(Race::class);
+        return $this->belongsTo(RaceEdition::class, 'race_edition_id');
     }
 }

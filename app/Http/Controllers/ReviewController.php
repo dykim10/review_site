@@ -7,6 +7,7 @@ use App\Models\Race;
 use App\Models\Review;
 use App\Services\ReviewService;
 use App\Services\SummaryService;
+use App\Services\WeatherCaseService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,29 +17,62 @@ class ReviewController extends Controller
     public function __construct(
         private ReviewService $reviewService,
         private SummaryService $summaryService,
+        private WeatherCaseService $weatherCaseService,
     ) {}
 
     public function create(Race $race)
     {
-        if ($this->reviewService->alreadyReviewed(auth()->user(), $race)) {
+        $edition = $race->latestEdition;
+        if (! $edition) {
             return redirect()->route('races.show', $race)
-                ->with('error', '이미 이 대회에 리뷰를 작성하셨습니다.');
+                ->with('error', '개최 정보가 없어 후기를 작성할 수 없습니다.');
         }
 
-        $editions = $race->editions()->orderByDesc('year')->get(['id', 'year', 'race_date', 'name']);
-        return view('reviews.create', compact('race', 'editions'));
+        if (! $this->reviewService->canCreateReview($edition)) {
+            return redirect()->route('races.show', $race)
+                ->with('error', '아직 후기 작성 기간이 아닙니다.');
+        }
+
+        $existing = $this->reviewService->findUserReview(auth()->user(), $edition);
+        if ($existing) {
+            return redirect()->route('reviews.edit', $existing);
+        }
+
+        $editions = $race->editions()
+            ->where('status', 'ended')
+            ->where('is_review_open', true)
+            ->orderByDesc('year')
+            ->get(['id', 'year', 'race_date', 'name']);
+
+        if ($editions->isEmpty()) {
+            return redirect()->route('races.show', $race)
+                ->with('error', '후기 작성 가능한 개최 회차가 없습니다.');
+        }
+
+        return view('reviews.create', compact('race', 'editions', 'edition'));
     }
 
     public function store(StoreReviewRequest $request, Race $race): RedirectResponse
     {
-        if ($this->reviewService->alreadyReviewed($request->user(), $race)) {
+        $editionId = $request->validated('race_edition_id')
+            ?? $race->latestEdition?->id;
+
+        $edition = $race->editions()->findOrFail($editionId);
+
+        if (! $this->reviewService->canCreateReview($edition)) {
             return redirect()->route('races.show', $race)
-                ->with('error', '이미 이 대회에 리뷰를 작성하셨습니다.');
+                ->with('error', '아직 후기 작성 기간이 아닙니다.');
         }
 
-        $review = $this->reviewService->create($request->validated(), $request->user(), $race);
+        $existing = $this->reviewService->findUserReview($request->user(), $edition);
+        if ($existing) {
+            return redirect()->route('reviews.edit', $existing);
+        }
+
+        $review = $this->reviewService->create($request->validated(), $request->user(), $edition);
         $this->summaryService->summarize($review, $race);
-        $this->summaryService->summarizeRace($race);
+        $this->summaryService->markRaceSummaryDirty($race);
+        $this->weatherCaseService->upsertFromReview($review->fresh(['raceEdition.race', 'raceEdition.weather']));
 
         return redirect()->route('races.show', $race)
             ->with('success', '리뷰가 등록되었습니다.');
@@ -47,38 +81,49 @@ class ReviewController extends Controller
     public function edit(Review $review)
     {
         $this->authorizeReview($review);
-        $race     = Race::findOrFail($review->race_id);
+        $review->load('raceEdition.race');
+        $race     = $review->raceEdition?->race ?? abort(404);
         $editions = $race->editions()->orderByDesc('year')->get(['id', 'year', 'race_date', 'name']);
-        return view('reviews.edit', compact('review', 'editions'));
+
+        return view('reviews.edit', compact('review', 'race', 'editions'));
     }
 
     public function update(StoreReviewRequest $request, Review $review): RedirectResponse
     {
         $this->authorizeReview($review);
-        $this->reviewService->update($review, $request->validated());
-        $race = Race::find($review->race_id);
-        if ($race) {
-            $this->summaryService->summarizeRace($race);
+
+        if (! $review->raceEdition?->canWriteReview()) {
+            return redirect()->route('races.show', $review->raceEdition?->race_id ?? abort(404))
+                ->with('error', '후기 수정 기간이 아닙니다.');
         }
 
-        return redirect()->route('races.show', $review->race_id)
+        $this->reviewService->update($review, $request->validated());
+        $review->loadMissing('raceEdition.race');
+        if ($review->raceEdition?->race) {
+            $this->summaryService->markRaceSummaryDirty($review->raceEdition->race);
+        }
+        $this->weatherCaseService->upsertFromReview($review->fresh(['raceEdition.race', 'raceEdition.weather']));
+
+        return redirect()->route('races.show', $review->raceEdition?->race_id ?? $review->race_id)
             ->with('success', '리뷰가 수정되었습니다.');
     }
 
     public function destroy(Review $review): RedirectResponse
     {
         $this->authorizeReview($review);
-        $race = Race::find($review->race_id);
+        $review->loadMissing('raceEdition.race');
+        $raceId = $review->raceEdition?->race_id;
+        $race   = $review->raceEdition?->race;
         $this->reviewService->delete($review);
+
         if ($race) {
-            $this->summaryService->summarizeRace($race);
+            $this->summaryService->markRaceSummaryDirty($race);
         }
 
-        return redirect()->route('races.show', $review->race_id)
+        return redirect()->route('races.show', $raceId ?? abort(404))
             ->with('success', '리뷰가 삭제되었습니다.');
     }
 
-    /** 워치 스크린샷 → CORE API 파싱 프록시 (AJAX) */
     public function parseWatch(Request $request): JsonResponse
     {
         $request->validate([
@@ -87,6 +132,7 @@ class ReviewController extends Controller
 
         try {
             $data = $this->reviewService->parseWatchImage($request->file('watch_image'));
+
             return response()->json(['ok' => true, 'data' => $data]);
         } catch (\Throwable $e) {
             return response()->json(['ok' => false, 'message' => $e->getMessage()], 422);

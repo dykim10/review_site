@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Race;
+use App\Models\RaceCourse;
 use App\Models\RaceEdition;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
@@ -12,6 +13,7 @@ class RacePlanService
 {
     public function generate(
         RaceEdition $edition,
+        int $userId,
         string $courseType,
         string $goalTime,
         string $trainingStatus = 'normal',
@@ -22,6 +24,7 @@ class RacePlanService
             $response = Http::timeout(120)
                 ->post(config('services.core_api.url') . '/api/race-plan/generate', [
                     'race_edition_id' => $edition->id,
+                    'user_id'         => $userId,
                     'course_type'     => $courseType,
                     'goal_time'       => $goalTime,
                     'training_status' => $trainingStatus,
@@ -45,15 +48,23 @@ class RacePlanService
         }
     }
 
+    public function hasOfficialGpx(RaceEdition $edition, string $courseType): bool
+    {
+        return RaceCourse::where('race_edition_id', $edition->id)
+            ->where('course_type', $courseType)
+            ->whereNotNull('gpx_url')
+            ->exists();
+    }
+
     public function availableEditions(Race $race): \Illuminate\Database\Eloquent\Collection
     {
-        return $race->editions()->orderByDesc('year')->get(['id', 'year', 'race_date', 'name']);
+        return $race->editions()->orderByDesc('year')->get(['id', 'year', 'race_date', 'name', 'status']);
     }
 
     public function courseTypesFor(Race $race): array
     {
         $distances = $race->distances ?? [];
-        $map = [];
+        $map       = [];
         foreach ($distances as $d) {
             $d = trim($d);
             if (in_array($d, ['풀', '풀마라톤', '42', '42.195km', 'FULL', 'Full'])) {
@@ -67,6 +78,7 @@ class RacePlanService
         if (empty($map)) {
             $map = ['FULL' => '풀마라톤 (42.195km)', 'HALF' => '하프마라톤 (21km)', '10K' => '10K (10km)'];
         }
+
         return $map;
     }
 }

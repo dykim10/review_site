@@ -4,18 +4,44 @@ namespace App\Http\Controllers;
 
 use App\Models\Race;
 use App\Models\RaceEdition;
+use App\Models\RacePlan;
+use App\Services\CoreApiClient;
 use App\Services\RacePlanService;
 use Illuminate\Http\Request;
 
 class RacePlanController extends Controller
 {
-    public function __construct(private RacePlanService $racePlanService) {}
+    public function __construct(
+        private RacePlanService $racePlanService,
+        private CoreApiClient $coreApi,
+    ) {}
+
+    public function index(RaceEdition $edition)
+    {
+        $plans = RacePlan::where('user_id', auth()->id())
+            ->where('race_edition_id', $edition->id)
+            ->orderByDesc('created_at')
+            ->get();
+
+        return view('race-plan.index', compact('edition', 'plans'));
+    }
+
+    public function show(RacePlan $plan)
+    {
+        abort_unless($plan->user_id === auth()->id(), 403);
+
+        return view('race-plan.show', compact('plan'));
+    }
 
     public function create(Race $race)
     {
         $editions    = $this->racePlanService->availableEditions($race);
         $courseTypes = $this->racePlanService->courseTypesFor($race);
-        return view('race-plan.create', compact('race', 'editions', 'courseTypes'));
+        $runningLogs = auth()->check()
+            ? $this->coreApi->getUserRunningLogs(auth()->id())
+            : [];
+
+        return view('race-plan.create', compact('race', 'editions', 'courseTypes', 'runningLogs'));
     }
 
     public function generate(Request $request, Race $race)
@@ -40,7 +66,7 @@ class RacePlanController extends Controller
         );
 
         $recent10kTime = null;
-        if (!empty($validated['recent_10k_m'])) {
+        if (! empty($validated['recent_10k_m'])) {
             $recent10kTime = sprintf('%d:%02d:%02d',
                 $validated['recent_10k_h'] ?? 0,
                 $validated['recent_10k_m'],
@@ -50,9 +76,14 @@ class RacePlanController extends Controller
 
         $edition = RaceEdition::findOrFail($validated['race_edition_id']);
 
+        if (! $this->racePlanService->hasOfficialGpx($edition, $validated['course_type'])) {
+            return back()->with('error', '공식 GPX 코스가 준비되지 않았습니다.')->withInput();
+        }
+
         try {
             $plan = $this->racePlanService->generate(
                 edition:        $edition,
+                userId:         auth()->id(),
                 courseType:     $validated['course_type'],
                 goalTime:       $goalTime,
                 trainingStatus: $validated['training_status'],

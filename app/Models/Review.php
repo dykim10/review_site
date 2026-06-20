@@ -10,11 +10,12 @@ class Review extends Model
     protected $table = 'review.reviews';
 
     protected $fillable = [
-        'race_id', 'race_edition_id', 'user_id', 'distance',
+        'race_edition_id', 'user_id', 'distance',
         'rating', 'content', 'ai_summary', 'sentiment',
         'image_urls',
         'finish_time', 'course_type', 'source',
         'parsed_watch_data', 'gpx_url', 'is_certified',
+        'certificate_url', 'verified_at', 'verified_by',
     ];
 
     protected function casts(): array
@@ -24,23 +25,39 @@ class Review extends Model
             'image_urls'        => 'array',
             'parsed_watch_data' => 'array',
             'is_certified'      => 'boolean',
+            'verified_at'       => 'datetime',
             'created_at'        => 'datetime',
             'updated_at'        => 'datetime',
         ];
     }
 
-    /** 저장된 경로를 공개 URL 배열로 변환 */
+    /** edition 경유 race id (reviews.race_id 컬럼 제거 후 호환) */
+    public function getRaceIdAttribute(): ?int
+    {
+        return $this->raceEdition?->race_id;
+    }
+
     public function getImageUrls(): array
     {
         $paths = $this->image_urls ?? [];
-        if (empty($paths)) return [];
+        if (empty($paths)) {
+            return [];
+        }
         $disk = config('filesystems.default') === 's3' ? 's3' : 'public';
-        return array_map(fn($p) => Storage::disk($disk)->url($p), $paths);
+
+        return array_map(fn ($p) => Storage::disk($disk)->url($p), $paths);
     }
 
     public function race()
     {
-        return $this->belongsTo(Race::class);
+        return $this->hasOneThrough(
+            Race::class,
+            RaceEdition::class,
+            'id',
+            'id',
+            'race_edition_id',
+            'race_id',
+        );
     }
 
     public function raceEdition()

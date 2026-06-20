@@ -34,9 +34,24 @@ class SummaryService
         }
     }
 
+    public function markRaceSummaryDirty(Race $race): void
+    {
+        $summary = $race->ai_race_summary ?? [];
+        if (! is_array($summary)) {
+            $summary = [];
+        }
+        $summary['_meta'] = array_merge($summary['_meta'] ?? [], [
+            'dirty'    => true,
+            'dirty_at' => now()->toIso8601String(),
+        ]);
+        $race->update(['ai_race_summary' => $summary]);
+    }
+
     public function summarizeRace(Race $race): void
     {
-        $reviews = Review::where('race_id', $race->id)
+        $editionIds = $race->editions()->pluck('id');
+
+        $reviews = Review::whereIn('race_edition_id', $editionIds)
             ->latest()
             ->limit(50)
             ->pluck('content')
@@ -46,7 +61,7 @@ class SummaryService
             return;
         }
 
-        $avgRating = Review::where('race_id', $race->id)->avg('rating') ?? 0;
+        $avgRating = Review::whereIn('race_edition_id', $editionIds)->avg('rating') ?? 0;
 
         try {
             $response = Http::timeout(30)->post(

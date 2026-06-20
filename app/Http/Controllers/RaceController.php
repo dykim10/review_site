@@ -2,9 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\CompletionRecord;
+use App\Models\EditionFeedback;
 use App\Models\InstagramCache;
 use App\Models\Race;
+use App\Models\RaceCourse;
 use App\Models\YoutubeCache;
 use App\Services\RaceService;
 use App\Services\ReviewService;
@@ -36,38 +37,51 @@ class RaceController extends Controller
 
     public function show(Race $race)
     {
-        $reviews         = $this->reviewService->getByRace($race);
-        $avgRating       = $this->reviewService->avgRating($race);
-        $alreadyReviewed = auth()->check()
-            ? $this->reviewService->alreadyReviewed(auth()->user(), $race)
-            : false;
+        $reviews   = $this->reviewService->getByRace($race);
+        $avgRating = $this->reviewService->avgRating($race);
 
-        $weather  = $this->weatherService->getForRace($race);
         $editions = $race->editions()
             ->withCount('reviews')
-            ->withCount('completionRecords')
             ->orderByDesc('year')
             ->get();
 
-        $myCompletion = null;
-        if (auth()->check() && $editions->isNotEmpty()) {
-            $myCompletion = CompletionRecord::where('user_id', auth()->id())
-                ->whereIn('race_edition_id', $editions->pluck('id'))
-                ->with('raceEdition')
-                ->first();
-        }
-
         $latestEdition = $editions->first();
 
-        // SNS 캐시 (최신 에디션 기준)
+        $alreadyReviewed = false;
+        $myReview        = null;
+        $feedbacks       = collect();
+        $hasOfficialGpx  = false;
+
+        if ($latestEdition) {
+            $hasOfficialGpx = RaceCourse::where('race_edition_id', $latestEdition->id)
+                ->whereNotNull('gpx_url')
+                ->exists();
+
+            if ($latestEdition->isUpcoming()) {
+                $feedbacks = EditionFeedback::where('race_edition_id', $latestEdition->id)
+                    ->orderByDesc('created_at')
+                    ->limit(20)
+                    ->get();
+            }
+        }
+
+        if (auth()->check() && $latestEdition) {
+            $myReview = $this->reviewService->findUserReview(auth()->user(), $latestEdition);
+            $alreadyReviewed = $myReview !== null;
+        }
+
+        $weather = $latestEdition
+            ? $this->weatherService->getForEdition($latestEdition)
+            : null;
+
         $youtubeItems   = [];
         $instagramItems = [];
         if ($latestEdition) {
             try {
                 $youtubeItems = YoutubeCache::where('race_edition_id', $latestEdition->id)
-                    ->orderByDesc('published_at')->limit(6)->get(['video_id','title','url','thumbnail_url','view_count'])->toArray();
+                    ->orderByDesc('published_at')->limit(6)->get(['video_id', 'title', 'url', 'thumbnail_url', 'view_count'])->toArray();
                 $instagramItems = InstagramCache::where('race_edition_id', $latestEdition->id)
-                    ->orderByDesc('posted_at')->limit(9)->get(['post_id','caption','thumbnail_url','permalink','like_count'])->toArray();
+                    ->orderByDesc('posted_at')->limit(9)->get(['post_id', 'caption', 'thumbnail_url', 'permalink', 'like_count'])->toArray();
             } catch (\Throwable) {
                 // SNS 테이블 미생성 시 graceful skip
             }
@@ -75,8 +89,8 @@ class RaceController extends Controller
 
         return view('races.show', compact(
             'race', 'reviews', 'avgRating', 'alreadyReviewed',
-            'weather', 'editions', 'myCompletion', 'latestEdition',
-            'youtubeItems', 'instagramItems',
+            'weather', 'editions', 'myReview', 'latestEdition',
+            'youtubeItems', 'instagramItems', 'feedbacks', 'hasOfficialGpx',
         ));
     }
 }

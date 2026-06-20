@@ -99,9 +99,10 @@ class Race extends Model
             "SELECT
                 COUNT(DISTINCT r.id) AS total_races,
                 COUNT(rv.id) AS total_reviews,
-                COUNT(DISTINCT rv.race_id) AS races_with_reviews
+                COUNT(DISTINCT CASE WHEN rv.id IS NOT NULL THEN r.id END) AS races_with_reviews
              FROM review.races r
-             LEFT JOIN review.reviews rv ON rv.race_id = r.id
+             LEFT JOIN review.race_editions ed ON ed.race_id = r.id
+             LEFT JOIN review.reviews rv ON rv.race_edition_id = ed.id
              WHERE r.is_active = true"
         );
 
@@ -144,21 +145,22 @@ class Race extends Model
 
         $rows = DB::select(
             "SELECT r.*,
+                    ed.id AS latest_edition_id,
                     ed.year AS latest_edition_year,
                     ed.race_date, ed.status, ed.location, ed.entry_fee,
                     COUNT(rv.id) AS review_count,
                     ROUND(AVG(rv.rating)::numeric, 1) AS avg_rating
              FROM review.races r
-             LEFT JOIN review.reviews rv ON rv.race_id = r.id
              LEFT JOIN LATERAL (
-                 SELECT year, race_date, status, location, entry_fee
+                 SELECT id, year, race_date, status, location, entry_fee
                  FROM review.race_editions
                  WHERE race_id = r.id
                  ORDER BY year DESC NULLS LAST
                  LIMIT 1
              ) ed ON true
+             LEFT JOIN review.reviews rv ON rv.race_edition_id = ed.id
              $where
-             GROUP BY r.id, ed.year, ed.race_date, ed.status, ed.location, ed.entry_fee
+             GROUP BY r.id, ed.id, ed.year, ed.race_date, ed.status, ed.location, ed.entry_fee
              $having",
             $bindings
         );
@@ -168,12 +170,20 @@ class Race extends Model
 
         $upcoming = $rows
             ->filter(fn ($r) => $r->latest_edition_year !== null && $r->latest_edition_year >= $currentYear)
-            ->sortBy('latest_edition_year')
+            ->sortBy([
+                fn ($r) => $r->latest_edition_id === null ? 1 : 0,
+                'latest_edition_year',
+            ])
             ->values();
 
         $past = $rows
             ->filter(fn ($r) => $r->latest_edition_year === null || $r->latest_edition_year < $currentYear)
             ->sort(function ($a, $b) {
+                $hasEditionA = $a->latest_edition_id !== null ? 0 : 1;
+                $hasEditionB = $b->latest_edition_id !== null ? 0 : 1;
+                if ($hasEditionA !== $hasEditionB) {
+                    return $hasEditionA <=> $hasEditionB;
+                }
                 $yearCmp = ($b->latest_edition_year ?? 0) <=> ($a->latest_edition_year ?? 0);
                 return $yearCmp !== 0 ? $yearCmp : ($b->review_count <=> $a->review_count);
             })

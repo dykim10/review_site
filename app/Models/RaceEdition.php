@@ -16,6 +16,7 @@ class RaceEdition extends Model
         'source', 'source_url',
         'weather_stn_id', 'weather_fetch_attempted_at',
         'entry_fee', 'reg_start', 'reg_end', 'status', 'is_active',
+        'is_review_open',
     ];
 
     protected function casts(): array
@@ -26,13 +27,12 @@ class RaceEdition extends Model
             'reg_end'                      => 'date',
             'is_domestic'                  => 'boolean',
             'is_active'                    => 'boolean',
+            'is_review_open'               => 'boolean',
             'weather_stn_id'               => 'integer',
             'weather_fetch_attempted_at'   => 'datetime',
             'year'                         => 'integer',
         ];
     }
-
-    // ─── Relations ────────────────────────────────────────────
 
     public function race()
     {
@@ -42,11 +42,6 @@ class RaceEdition extends Model
     public function reviews()
     {
         return $this->hasMany(Review::class, 'race_edition_id');
-    }
-
-    public function completionRecords()
-    {
-        return $this->hasMany(CompletionRecord::class, 'race_edition_id');
     }
 
     public function stats()
@@ -59,7 +54,30 @@ class RaceEdition extends Model
         return $this->hasOne(RaceWeather::class, 'race_edition_id');
     }
 
-    // ─── Scopes ───────────────────────────────────────────────
+    public function plans()
+    {
+        return $this->hasMany(RacePlan::class, 'race_edition_id');
+    }
+
+    public function feedbacks()
+    {
+        return $this->hasMany(EditionFeedback::class, 'race_edition_id');
+    }
+
+    public function isUpcoming(): bool
+    {
+        return $this->status === 'upcoming';
+    }
+
+    public function isEnded(): bool
+    {
+        return $this->status === 'ended';
+    }
+
+    public function canWriteReview(): bool
+    {
+        return $this->isEnded() && $this->is_review_open;
+    }
 
     public function scopeActive($query)
     {
@@ -86,11 +104,6 @@ class RaceEdition extends Model
         return $query->where('race_date', '<', now()->toDateString());
     }
 
-    // ─── Static Methods ───────────────────────────────────────
-
-    /**
-     * 대회 목록 + 리뷰 수 / 평균 평점 JOIN (페이지네이션)
-     */
     public static function listWithReviewStats(
         array $filters = [],
         int $perPage = 20,
@@ -101,14 +114,20 @@ class RaceEdition extends Model
         $city       = $filters['city']        ?? null;
 
         $where = "WHERE re.is_active = true AND re.race_date >= CURRENT_DATE"
-            . ($isDomestic !== null ? " AND re.is_domestic = :is_domestic" : '')
-            . ($year       ? " AND re.year = :year"                        : '')
-            . ($city       ? " AND re.city = :city"                        : '');
+            . ($isDomestic !== null ? ' AND re.is_domestic = :is_domestic' : '')
+            . ($year       ? ' AND re.year = :year'                        : '')
+            . ($city       ? ' AND re.city = :city'                        : '');
 
         $bindings = [];
-        if ($isDomestic !== null) $bindings['is_domestic'] = (bool) $isDomestic;
-        if ($year)       $bindings['year'] = $year;
-        if ($city)       $bindings['city'] = $city;
+        if ($isDomestic !== null) {
+            $bindings['is_domestic'] = (bool) $isDomestic;
+        }
+        if ($year) {
+            $bindings['year'] = $year;
+        }
+        if ($city) {
+            $bindings['city'] = $city;
+        }
 
         $total = DB::selectOne(
             "SELECT COUNT(*) AS cnt FROM review.race_editions re $where",

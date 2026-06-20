@@ -17,57 +17,48 @@ class WeatherService
         $this->coreApiUrl = rtrim(config('services.core_api.url', 'http://localhost:8100'), '/');
     }
 
-    /**
-     * 대회 날씨 조회.
-     *
-     * 방어 전략: race_weather 테이블이 단일 캐시.
-     *   - DB에 레코드 있음 → 즉시 반환 (API 재호출 없음)
-     *   - DB에 없음 → CORE API 1회 호출
-     *     - 성공: 날씨 데이터 저장 → 반환
-     *     - 실패/데이터 없음: 빈 마커 레코드 저장 → 이후 재호출 차단
-     */
     public function getForRace(Race $race): ?RaceWeather
     {
-        // 1. DB에 레코드 있음 → 즉시 반환 (성공 데이터 또는 빈 마커 모두 포함)
-        $cached = RaceWeather::where('race_id', $race->id)->first();
+        $edition = $race->latestEdition;
+        if (! $edition) {
+            return null;
+        }
+
+        return $this->getForEdition($edition);
+    }
+
+    public function getForEdition(RaceEdition $edition): ?RaceWeather
+    {
+        $cached = RaceWeather::where('race_edition_id', $edition->id)->first();
         if ($cached) {
             return $cached->temperature !== null ? $cached : null;
         }
 
-        // 2. 미래 대회 → 날씨 없음 (최신 edition 기준)
-        $latestDate = $race->editions()->orderByDesc('year')->value('race_date');
-        if (!$latestDate || \Carbon\Carbon::parse($latestDate)->isFuture()) {
+        if (! $edition->race_date || \Carbon\Carbon::parse($edition->race_date)->isFuture()) {
             return null;
         }
 
-        // 3. CORE API 1회 호출
         try {
             $response = Http::timeout(10)
-                ->post("{$this->coreApiUrl}/api/weather/race/{$race->id}");
+                ->post("{$this->coreApiUrl}/api/weather/race/{$edition->id}");
 
             if ($response->successful()) {
-                return RaceWeather::where('race_id', $race->id)->first();
+                return RaceWeather::where('race_edition_id', $edition->id)->first();
             }
 
-            Log::warning("날씨 수집 실패 race_id={$race->id}: " . $response->status());
+            Log::warning("날씨 수집 실패 edition_id={$edition->id}: " . $response->status());
         } catch (\Exception $e) {
-            Log::warning("날씨 API 연결 오류 race_id={$race->id}: " . $e->getMessage());
+            Log::warning("날씨 API 연결 오류 edition_id={$edition->id}: " . $e->getMessage());
         }
 
-        // 4. 실패 시 빈 마커 레코드 저장 → 이후 재호출 차단
-        RaceWeather::upsert(
-            [['race_id' => $race->id, 'fetched_at' => now()]],
-            ['race_id'],
-            ['fetched_at']
+        RaceWeather::updateOrCreate(
+            ['race_edition_id' => $edition->id],
+            ['fetched_at' => now()]
         );
 
         return null;
     }
 
-    /**
-     * race_editions 기반 지점코드 자동 추론.
-     * 대회 인스턴스 등록/수정 시 호출.
-     */
     public function autoResolveStnForEdition(RaceEdition $edition): void
     {
         if ($edition->weather_stn_id) {
@@ -91,22 +82,19 @@ class WeatherService
         }
     }
 
-    /**
-     * 날씨 상태 아이콘 반환.
-     */
     public static function conditionIcon(?string $condition): string
     {
-        return match($condition) {
-            '맑음'      => '☀️',
-            '구름조금'  => '🌤',
-            '구름많음'  => '⛅',
-            '흐림'      => '☁️',
-            '비'        => '🌧',
-            '눈'        => '❄️',
-            '진눈깨비'  => '🌨',
-            '소나기'    => '⛈',
-            '안개'      => '🌫',
-            default     => '🌡',
+        return match ($condition) {
+            '맑음'     => '☀️',
+            '구름조금' => '🌤',
+            '구름많음' => '⛅',
+            '흐림'     => '☁️',
+            '비'       => '🌧',
+            '눈'       => '❄️',
+            '진눈깨비' => '🌨',
+            '소나기'   => '⛈',
+            '안개'     => '🌫',
+            default    => '🌡',
         };
     }
 }

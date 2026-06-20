@@ -1,9 +1,9 @@
 <?php
 
+use App\Http\Controllers\EditionFeedbackController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RaceController;
 use App\Http\Controllers\ReviewController;
-use App\Http\Controllers\CompletionRecordController;
 use App\Http\Controllers\Admin\RaceController as AdminRaceController;
 use App\Http\Controllers\Admin\RaceEditionController as AdminRaceEditionController;
 use App\Http\Controllers\Admin\RaceCourseController as AdminRaceCourseController;
@@ -27,14 +27,14 @@ Route::middleware('auth')->group(function () {
 Route::get('/races', [RaceController::class, 'index'])->name('races.index');
 Route::get('/races/{race}', [RaceController::class, 'show'])->name('races.show');
 
-// 완주 기록 - 인증 필요
-Route::middleware(['auth', 'verified'])->group(function () {
-    Route::post('/races/{race}/completions', [CompletionRecordController::class, 'store'])->name('completions.store');
-    Route::delete('/completions/{record}', [CompletionRecordController::class, 'destroy'])->name('completions.destroy');
-});
-
 // 리뷰 - 인증 필요
 Route::middleware(['auth', 'verified'])->group(function () {
+    Route::post('/editions/{edition}/feedback', [EditionFeedbackController::class, 'store'])
+        ->name('editions.feedback.store');
+
+    Route::get('/editions/{edition}/plans', [RacePlanController::class, 'index'])->name('race-plan.index');
+    Route::get('/plans/{plan}', [RacePlanController::class, 'show'])->name('race-plan.show');
+
     Route::get('/races/{race}/reviews/create', [ReviewController::class, 'create'])->name('reviews.create');
     Route::post('/races/{race}/reviews', [ReviewController::class, 'store'])->name('reviews.store');
     Route::get('/reviews/{review}/edit', [ReviewController::class, 'edit'])->name('reviews.edit');

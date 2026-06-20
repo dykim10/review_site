@@ -12,6 +12,7 @@ class RaceWeatherCase extends Model
         'race_edition_id', 'review_id',
         'temperature', 'humidity', 'wind_speed',
         'finish_time_seconds', 'pace_splits', 'heart_rate_splits',
+        'is_certified', 'source',
     ];
 
     protected function casts(): array
@@ -23,6 +24,7 @@ class RaceWeatherCase extends Model
             'finish_time_seconds' => 'integer',
             'pace_splits'         => 'array',
             'heart_rate_splits'   => 'array',
+            'is_certified'        => 'boolean',
         ];
     }
 

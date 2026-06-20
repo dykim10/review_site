@@ -29,8 +29,9 @@ class StoreRaceEditionRequest extends FormRequest
             'entry_fee'      => 'nullable|string|max:100',
             'reg_start'      => 'nullable|date',
             'reg_end'        => 'nullable|date|after_or_equal:reg_start',
-            'status'         => 'nullable|string|in:접수전,접수중,접수마감,대회종료,active',
+            'status'         => 'nullable|string|in:upcoming,ended,접수전,접수중,접수마감,대회종료,active',
             'is_active'      => 'boolean',
+            'is_review_open' => 'boolean',
         ];
     }
 
@@ -48,8 +49,9 @@ class StoreRaceEditionRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $this->merge([
-            'is_domestic' => $this->boolean('is_domestic', true),
-            'is_active'   => $this->boolean('is_active', true),
+            'is_domestic'    => $this->boolean('is_domestic', true),
+            'is_active'      => $this->boolean('is_active', true),
+            'is_review_open' => $this->boolean('is_review_open', false),
             'country'     => $this->input('country') ?: ($this->boolean('is_domestic', true) ? '대한민국' : null),
             'year'        => $this->input('year') ?: ($this->input('race_date') ? date('Y', strtotime($this->input('race_date'))) : null),
         ]);
