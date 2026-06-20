@@ -7,6 +7,7 @@ use App\Models\RaceCourse;
 use App\Models\RaceEdition;
 use App\Services\RaceCourseService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class RaceCourseController extends Controller
 {
@@ -34,7 +35,7 @@ class RaceCourseController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'race_edition_id' => 'required|integer|exists:review.race_editions,id',
+            'race_edition_id' => ['required', 'integer', Rule::exists(RaceEdition::class, 'id')],
             'course_type'     => 'required|in:FULL,HALF,10K',
             'gpx_file'        => 'required|file|mimes:gpx,xml|max:20480',
             'source'          => 'nullable|in:wari-gari,goandrace,official,manual',

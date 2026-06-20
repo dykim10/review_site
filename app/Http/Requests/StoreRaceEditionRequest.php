@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Race;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreRaceEditionRequest extends FormRequest
 {
@@ -14,7 +16,7 @@ class StoreRaceEditionRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'race_id'        => 'nullable|integer|exists:review.races,id',
+            'race_id'        => ['nullable', 'integer', Rule::exists(Race::class, 'id')],
             'name'           => 'required|string|max:200',
             'year'           => 'required|integer|min:1990|max:2100',
             'race_date'      => 'nullable|date',

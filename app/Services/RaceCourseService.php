@@ -27,12 +27,14 @@ class RaceCourseService
         UploadedFile $gpxFile,
         array $extra = []
     ): RaceCourse {
-        $gpxUrl = $this->uploadToS3($gpxFile, $edition->id, $courseType);
+        $uploaded = $this->uploadToS3($gpxFile, $edition->id, $courseType);
 
         $payload = array_merge([
             'race_edition_id' => $edition->id,
             'course_type'     => strtoupper($courseType),
-            'gpx_url'         => $gpxUrl,
+            'gpx_url'         => $uploaded['gpx_url'],
+            'elevation_data'  => $uploaded['elevation_data'],
+            'segments'        => $uploaded['segments'],
             'source'          => $extra['source']      ?? 'manual',
             'is_certified'    => $extra['is_certified'] ?? false,
             'certified_at'    => $extra['certified_at'] ?? null,
@@ -54,9 +56,12 @@ class RaceCourseService
         $course->delete();
     }
 
-    private function uploadToS3(UploadedFile $file, int $editionId, string $courseType): string
+    /**
+     * @return array{gpx_url: string, elevation_data: ?array, segments: ?array}
+     */
+    private function uploadToS3(UploadedFile $file, int $editionId, string $courseType): array
     {
-        $response = Http::timeout(30)
+        $response = Http::timeout(60)
             ->attach('file', file_get_contents($file->getRealPath()), $file->getClientOriginalName())
             ->post("{$this->coreApiUrl}/api/gpx/upload", [
                 'race_edition_id' => $editionId,
@@ -65,10 +70,34 @@ class RaceCourseService
 
         if (!$response->successful()) {
             Log::error('GPX S3 업로드 실패', ['status' => $response->status(), 'body' => $response->body()]);
-            throw new \RuntimeException('GPX 파일 업로드에 실패했습니다. 잠시 후 다시 시도해주세요.');
+
+            $detail = $response->json('detail');
+            $reason = is_string($detail) ? $detail : null;
+
+            throw new \RuntimeException(
+                $reason
+                    ? "GPX 파일 업로드 실패: {$reason}"
+                    : 'GPX 파일 업로드에 실패했습니다. core-api(8100) 실행 및 AWS 설정을 확인해주세요.'
+            );
         }
 
-        return $response->json('gpx_url');
+        $gpxUrl = $response->json('gpx_url');
+        if (!$gpxUrl) {
+            throw new \RuntimeException('GPX 업로드 응답에 URL이 없습니다.');
+        }
+
+        if (!$response->json('elevation_data')) {
+            Log::warning('GPX 고도 파싱 실패 — gpx_url만 저장 (분석 시 "상세 데이터 없음"으로 표시됨)', [
+                'race_edition_id' => $editionId,
+                'course_type'     => $courseType,
+            ]);
+        }
+
+        return [
+            'gpx_url'        => $gpxUrl,
+            'elevation_data' => $response->json('elevation_data'),
+            'segments'       => $response->json('segments'),
+        ];
     }
 
     private function deleteFromS3(string $url): void

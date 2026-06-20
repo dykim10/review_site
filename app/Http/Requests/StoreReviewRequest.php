@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests;
 
+use App\Models\RaceEdition;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreReviewRequest extends FormRequest
 {
@@ -14,7 +16,7 @@ class StoreReviewRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'race_edition_id'    => 'nullable|integer|exists:review.race_editions,id',
+            'race_edition_id'    => ['nullable', 'integer', Rule::exists(RaceEdition::class, 'id')],
             'distance'           => 'required|string|max:20',
             'course_type'        => 'nullable|in:FULL,HALF,10K',
             'finish_time'        => ['nullable', 'regex:/^\d{1,2}:\d{2}:\d{2}$/'],

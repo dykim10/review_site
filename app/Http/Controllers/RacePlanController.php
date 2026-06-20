@@ -8,6 +8,7 @@ use App\Models\RacePlan;
 use App\Services\CoreApiClient;
 use App\Services\RacePlanService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class RacePlanController extends Controller
 {
@@ -47,7 +48,7 @@ class RacePlanController extends Controller
     public function generate(Request $request, Race $race)
     {
         $validated = $request->validate([
-            'race_edition_id' => 'required|integer|exists:review.race_editions,id',
+            'race_edition_id' => ['required', 'integer', Rule::exists(RaceEdition::class, 'id')],
             'course_type'     => 'required|in:FULL,HALF,10K',
             'goal_h'          => 'required|integer|min:0|max:9',
             'goal_m'          => 'required|integer|min:0|max:59',

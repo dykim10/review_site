@@ -36,14 +36,20 @@
 
             <div class="adm-field">
                 <label class="adm-label">GPX 파일 업로드 <span style="color:#DC2626;">*</span></label>
-                <input type="file" name="gpx_file" accept=".gpx,.tcx" required class="adm-input">
-                <p style="font-size:0.72rem;color:#9CA3AF;margin-top:0.4rem;">지원 형식: .gpx, .tcx</p>
+                <input type="file" name="gpx_file" accept=".gpx,.xml" required class="adm-input">
+                <p style="font-size:0.72rem;color:#9CA3AF;margin-top:0.4rem;">지원 형식: .gpx (GPX/XML)</p>
                 @error('gpx_file')<p class="adm-field-error">{{ $message }}</p>@enderror
             </div>
 
             <div class="adm-field">
                 <label class="adm-label">출처</label>
-                <input type="text" name="source" value="{{ old('source') }}" placeholder="예: wari-gari, goandrace, 공식" class="adm-input">
+                <select name="source" class="adm-input">
+                    @php($sources = ['manual' => '수동 등록', 'official' => '공식', 'wari-gari' => '와리가리', 'goandrace' => '고앤레이스'])
+                    @foreach($sources as $val => $label)
+                        <option value="{{ $val }}" @selected(old('source', 'manual') === $val)>{{ $label }}</option>
+                    @endforeach
+                </select>
+                @error('source')<p class="adm-field-error">{{ $message }}</p>@enderror
             </div>
 
             <div class="adm-field">

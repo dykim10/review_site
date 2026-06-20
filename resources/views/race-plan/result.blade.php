@@ -4,7 +4,7 @@
 
 @push('styles')
 <style>
-    :root { --bg:#0A0A0A; --s:#141414; --s2:#1C1C1C; --bd:#242424; --acc:#FF6B35; --acc-d:#E85520; --text:#E8E8E8; --t2:#AAAAAA; --mut:#666; --green:#4ADE80; --blue:#60A5FA; }
+    :root { --bg:#0A0A0A; --s:#fff; --s2:#F7F8FA; --bd:#E8EAEE; --acc:#E80043; --acc-d:#C20038; --text:#16181D; --t2:#5A6170; --mut:#9AA1AE; --green:#16A34A; --blue:#2563EB; }
 
     /* ── HERO ── */
     .plan-hero { border-bottom: 1px solid var(--bd); padding: 2.5rem 1.5rem 2rem; background: radial-gradient(ellipse 60% 50% at 0% 0%, rgba(255,107,53,0.08), transparent 65%), var(--bg); }
@@ -25,7 +25,7 @@
     /* ── SECTION ── */
     .section { margin-bottom: 1.5rem; }
     .section-title { font-family: 'Archivo', sans-serif; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--mut); margin-bottom: 1rem; padding-bottom: 0.65rem; border-bottom: 1px solid var(--bd); }
-    .card { background: var(--s); border: 1px solid var(--bd); border-radius: 12px; padding: 1.4rem 1.5rem; }
+    .card { background: var(--s); border: 1px solid var(--bd); border-radius: 12px; padding: 1.4rem 1.5rem; box-shadow: 0 1px 3px rgba(22,24,29,0.05); }
 
     /* ── WEATHER ── */
     .weather-grid { display: flex; flex-wrap: wrap; gap: 0.6rem; }
@@ -75,7 +75,7 @@
     /* ── ACTIONS ── */
     .action-row { display: flex; gap: 0.75rem; margin-top: 1.5rem; flex-wrap: wrap; }
     .btn-again { padding: 0.65rem 1.4rem; background: transparent; border: 1.5px solid var(--acc); color: var(--acc); border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; font-family: 'Pretendard', sans-serif; transition: all 0.15s; }
-    .btn-again:hover { background: rgba(255,107,53,0.08); }
+    .btn-again:hover { background: rgba(232,0,67,0.06); }
     .btn-race { padding: 0.65rem 1.4rem; background: var(--acc); color: #fff; border: none; border-radius: 8px; font-size: 0.85rem; font-weight: 600; font-family: 'Pretendard', sans-serif; transition: background 0.15s; }
     .btn-race:hover { background: var(--acc-d); }
 
