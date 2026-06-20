@@ -43,13 +43,23 @@
                     <input type="text" name="race_time" value="{{ old('race_time', $edition->race_time) }}" class="adm-input">
                 </div>
                 <div class="adm-field">
-                    <label class="adm-label">상태</label>
+                    <label class="adm-label">생명주기 상태</label>
                     <select name="status" class="adm-input">
-                        @foreach(['접수전','접수중','접수마감','대회종료'] as $s)
-                            <option value="{{ $s }}" @selected(old('status', $edition->status) === $s)>{{ $s }}</option>
+                        @foreach(['upcoming' => '예정 (upcoming)', 'ended' => '종료 (ended)'] as $val => $label)
+                            <option value="{{ $val }}" @selected(old('status', $edition->status) === $val)>{{ $label }}</option>
                         @endforeach
                     </select>
                 </div>
+            </div>
+
+            <div class="adm-field">
+                <label class="adm-label" style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;">
+                    <input type="hidden" name="is_review_open" value="0">
+                    <input type="checkbox" name="is_review_open" value="1"
+                           @checked(old('is_review_open', $edition->is_review_open))>
+                    후기 작성 개방 (is_review_open)
+                </label>
+                <p class="adm-label-hint">ended 상태에서 후기 작성 허용. race_date 경과 시 스케줄러가 자동 true.</p>
             </div>
 
             <div class="adm-grid-2">

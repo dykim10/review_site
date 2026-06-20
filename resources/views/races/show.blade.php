@@ -295,6 +295,10 @@
 
                 <h1 class="race-name">{{ $race->name }}</h1>
 
+                @unless($latestEdition)
+                    <p style="margin-top:0.65rem;font-size:0.82rem;color:var(--muted);">개최 정보 준비 중 — 시즌 일정이 등록되면 표시됩니다.</p>
+                @endunless
+
                 <div class="hero-meta">
                     <span class="hero-meta-item">
                         <svg class="hero-meta-ico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
@@ -402,7 +406,6 @@
                         <th style="text-align:left;padding:0.4rem 0.5rem;color:var(--muted);font-size:0.7rem;font-weight:600;letter-spacing:0.06em;">연도</th>
                         <th style="text-align:left;padding:0.4rem 0.5rem;color:var(--muted);font-size:0.7rem;font-weight:600;letter-spacing:0.06em;">대회일</th>
                         <th style="text-align:center;padding:0.4rem 0.5rem;color:var(--muted);font-size:0.7rem;font-weight:600;letter-spacing:0.06em;">리뷰</th>
-                        <th style="text-align:center;padding:0.4rem 0.5rem;color:var(--muted);font-size:0.7rem;font-weight:600;letter-spacing:0.06em;">완주 기록</th>
                         <th style="text-align:left;padding:0.4rem 0.5rem;color:var(--muted);font-size:0.7rem;font-weight:600;letter-spacing:0.06em;">상태</th>
                     </tr>
                 </thead>
@@ -412,11 +415,18 @@
                         <td style="padding:0.55rem 0.5rem;color:var(--text);font-weight:600;">{{ $ed->year ?: '-' }}</td>
                         <td style="padding:0.55rem 0.5rem;color:var(--text2);">{{ $ed->race_date?->format('Y.m.d') ?? '-' }}</td>
                         <td style="padding:0.55rem 0.5rem;text-align:center;color:var(--text2);">{{ $ed->reviews_count }}</td>
-                        <td style="padding:0.55rem 0.5rem;text-align:center;color:var(--text2);">{{ $ed->completion_records_count }}</td>
                         <td style="padding:0.55rem 0.5rem;">
                             @php
-                                $edSt = $ed->status ?? '접수전';
-                                $edStCls = match($edSt) { '접수중' => 'b-receiving', '접수전' => 'b-upcoming', '접수마감' => 'b-closed', '대회종료' => 'b-ended', default => 'b-upcoming' };
+                                $edSt = $ed->status ?? 'upcoming';
+                                $edStCls = match($edSt) {
+                                    'upcoming' => 'b-upcoming',
+                                    'ended' => 'b-ended',
+                                    '접수중' => 'b-receiving',
+                                    '접수전' => 'b-upcoming',
+                                    '접수마감' => 'b-closed',
+                                    '대회종료' => 'b-ended',
+                                    default => 'b-upcoming',
+                                };
                             @endphp
                             <span class="badge {{ $edStCls }}" style="font-size:0.6rem;">{{ $edSt }}</span>
                         </td>
@@ -753,76 +763,52 @@
             </div>
         </div>
 
-        {{-- 완주 기록 카드 --}}
+        {{-- 내 후기 / 완주 기록 (reviews SSOT) --}}
         @if($editions->isNotEmpty())
         <div class="s-card">
-            <div class="s-heading">완주 기록</div>
+            <div class="s-heading">내 후기</div>
             @auth
-                @if($myCompletion)
+                @if($myReview)
                     <div style="margin-bottom:0.75rem;">
-                        <div style="font-size:0.75rem;color:var(--text2);font-weight:600;margin-bottom:0.2rem;">
-                            {{ $myCompletion->raceEdition?->year }}년 완주
-                        </div>
-                        @if($myCompletion->finish_time_seconds)
+                        @if($myReview->finish_time)
                         <div style="font-family:'Bebas Neue','Archivo',sans-serif;font-size:1.5rem;color:var(--accent);letter-spacing:0.06em;line-height:1.1;">
-                            {{ $myCompletion->finish_time_formatted }}
+                            {{ $myReview->finish_time }}
                         </div>
                         @endif
-                        @if($myCompletion->bib_number)
-                        <div style="font-size:0.72rem;color:var(--muted);margin-top:0.15rem;">번호표: {{ $myCompletion->bib_number }}</div>
-                        @endif
-                        @if($myCompletion->certificate_image_url)
-                        <a href="{{ $myCompletion->certificate_image_url }}" target="_blank" rel="noopener"
-                           style="display:inline-block;margin-top:0.5rem;font-size:0.72rem;color:var(--accent);">🏅 완주 인증서 보기</a>
+                        @if($myReview->is_certified)
+                        <div style="font-size:0.72rem;color:var(--accent);margin-top:0.35rem;">🏅 완주 라벨</div>
                         @endif
                     </div>
-                    <form method="POST" action="{{ route('completions.destroy', $myCompletion) }}"
-                          onsubmit="return confirm('완주 기록을 삭제하시겠습니까?')">
-                        @csrf @method('DELETE')
-                        <button type="submit" class="action-btn action-secondary" style="font-size:0.76rem;padding:0.45rem;">기록 삭제</button>
-                    </form>
+                    <a href="{{ route('reviews.edit', $myReview) }}" class="action-btn action-secondary" style="font-size:0.76rem;padding:0.45rem;">후기 수정</a>
+                @elseif($latestEdition?->canWriteReview())
+                    <p style="font-size:0.78rem;color:var(--muted);margin-bottom:0.75rem;">이 대회 후기를 작성해 보세요.</p>
+                    <a href="{{ route('reviews.create', $race) }}" class="action-btn action-reg">+ 후기 작성</a>
                 @else
-                    <p style="font-size:0.78rem;color:var(--muted);margin-bottom:0.75rem;">이 대회를 완주하셨나요?</p>
-                    <button type="button" class="action-btn action-reg"
-                            onclick="document.getElementById('completion-form').classList.toggle('hidden')">
-                        + 완주 기록 등록
-                    </button>
-                    <div id="completion-form" class="hidden" style="margin-top:0.85rem;padding-top:0.85rem;border-top:1px solid var(--border);">
-                        <form method="POST" action="{{ route('completions.store', $race) }}" enctype="multipart/form-data">
-                            @csrf
-                            <select name="race_edition_id" required
-                                    style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:0.45rem 0.65rem;font-size:0.8rem;color:var(--text);margin-bottom:0.5rem;font-family:'Pretendard',sans-serif;">
-                                <option value="">회차 선택 *</option>
-                                @foreach($editions as $ed)
-                                    <option value="{{ $ed->id }}">{{ $ed->year }}년 {{ $ed->race_date?->format('m.d') }}</option>
-                                @endforeach
-                            </select>
-                            <input type="text" name="finish_time" placeholder="완주 기록 (예: 3:45:30)" maxlength="10"
-                                   style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:0.45rem 0.65rem;font-size:0.8rem;color:var(--text);margin-bottom:0.5rem;font-family:'Pretendard',sans-serif;">
-                            <input type="text" name="official_time" placeholder="공식 기록 (선택)" maxlength="10"
-                                   style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:0.45rem 0.65rem;font-size:0.8rem;color:var(--text);margin-bottom:0.5rem;font-family:'Pretendard',sans-serif;">
-                            <input type="text" name="bib_number" placeholder="번호표 (선택)" maxlength="20"
-                                   style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:0.45rem 0.65rem;font-size:0.8rem;color:var(--text);margin-bottom:0.5rem;font-family:'Pretendard',sans-serif;">
-                            <label style="display:block;font-size:0.72rem;color:var(--muted);margin-bottom:0.3rem;">완주 인증서 (선택, 10MB 이하)</label>
-                            <input type="file" name="certificate" accept="image/*"
-                                   style="width:100%;font-size:0.75rem;color:var(--text2);margin-bottom:0.6rem;">
-                            <button type="submit" class="action-btn action-primary" style="font-size:0.78rem;padding:0.5rem;">등록하기</button>
-                        </form>
-                    </div>
+                    <p style="font-size:0.78rem;color:var(--muted);">아직 후기 작성 기간이 아닙니다.</p>
                 @endif
             @else
-                <p style="font-size:0.78rem;color:var(--muted);">로그인 후 완주 기록을 등록할 수 있습니다.</p>
+                <p style="font-size:0.78rem;color:var(--muted);">로그인 후 후기를 작성할 수 있습니다.</p>
             @endauth
         </div>
+        @endif
+
+        @if($latestEdition?->isUpcoming())
+            @include('races.partials.feedback-tab', ['edition' => $latestEdition, 'feedbacks' => $feedbacks])
         @endif
 
         {{-- Action Buttons --}}
         <div class="s-card">
             @auth
-                @if(!$alreadyReviewed)
-                    <a href="{{ route('reviews.create', $race) }}" class="action-btn action-primary">리뷰 작성하기</a>
+                @if($latestEdition?->canWriteReview())
+                    @if(!$alreadyReviewed)
+                        <a href="{{ route('reviews.create', $race) }}" class="action-btn action-primary">리뷰 작성하기</a>
+                    @else
+                        <a href="{{ route('reviews.edit', $myReview) }}" class="action-btn action-secondary">후기 수정</a>
+                    @endif
+                @elseif($latestEdition?->isUpcoming())
+                    <span class="action-btn action-disabled">대회 전 — 기대/개선 의견을 남겨주세요</span>
                 @else
-                    <span class="action-btn action-disabled">✓ 리뷰 작성 완료</span>
+                    <span class="action-btn action-disabled">후기 작성 기간이 아닙니다</span>
                 @endif
             @else
                 <a href="{{ route('login') }}" class="action-btn action-primary">로그인 후 리뷰 작성</a>
@@ -830,10 +816,15 @@
 
             {{-- 레이스 플랜 버튼 --}}
             @auth
-                <a href="{{ route('race-plan.create', $race) }}" class="action-btn" style="background:linear-gradient(135deg,rgba(255,107,53,0.15),rgba(255,184,0,0.08));border:1px solid rgba(255,107,53,0.35);color:var(--accent);display:flex;align-items:center;justify-content:center;gap:0.4rem;">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-                    AI 레이스 플랜 생성
-                </a>
+                @if($hasOfficialGpx && $latestEdition)
+                    <a href="{{ route('race-plan.create', $race) }}" class="action-btn" style="background:linear-gradient(135deg,rgba(255,107,53,0.15),rgba(255,184,0,0.08));border:1px solid rgba(255,107,53,0.35);color:var(--accent);display:flex;align-items:center;justify-content:center;gap:0.4rem;margin-top:0.5rem;">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                        AI 레이스 플랜 생성
+                    </a>
+                    <a href="{{ route('race-plan.index', $latestEdition) }}" class="action-btn action-secondary" style="margin-top:0.5rem;font-size:0.76rem;">내 플랜 이력</a>
+                @else
+                    <span class="action-btn action-disabled" style="margin-top:0.5rem;">레이스 플랜 (공식 코스 준비 중)</span>
+                @endif
             @endauth
 
             @if($race->website_url)

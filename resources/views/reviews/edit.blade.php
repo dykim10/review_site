@@ -87,7 +87,7 @@
 
 @section('content')
 <div class="page-wrap">
-    <a href="{{ route('races.show', $review->race_id) }}" class="back-link">
+    <a href="{{ route('races.show', $race) }}" class="back-link">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="15 18 9 12 15 6"/></svg>
         대회 상세로
     </a>
@@ -283,7 +283,7 @@
 
         <div class="btn-row">
             <button type="submit" class="btn-submit">수정하기</button>
-            <a href="{{ route('races.show', $review->race_id) }}" class="btn-cancel">취소</a>
+            <a href="{{ route('races.show', $race) }}" class="btn-cancel">취소</a>
         </div>
     </form>
 </div>

@@ -345,6 +345,8 @@
                                 @endif
                                 @if($race->latest_edition_year)
                                     <span class="badge-year">{{ $race->latest_edition_year }}</span>
+                                @elseif(empty($race->latest_edition_id))
+                                    <span class="badge" style="background:#F3F4F6;color:#6B7280;border:1px solid #E5E7EB;">예정/참고</span>
                                 @endif
                                 @if($race->city)
                                     <span class="badge-city">{{ $race->city }}</span>
@@ -409,6 +411,8 @@
                                 @endif
                                 @if($race->latest_edition_year)
                                     <span class="badge-year">{{ $race->latest_edition_year }}</span>
+                                @elseif(empty($race->latest_edition_id))
+                                    <span class="badge" style="background:#F3F4F6;color:#6B7280;border:1px solid #E5E7EB;">예정/참고</span>
                                 @endif
                                 @if($race->city)
                                     <span class="badge-city">{{ $race->city }}</span>
