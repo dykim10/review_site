@@ -148,6 +148,32 @@
     .rc-cta { font-size: 0.78rem; font-weight: 600; color: #fff; background: #E80043; padding: 0.4rem 0.9rem; border-radius: 999px; transition: background 0.15s; flex-shrink: 0; }
     .rc-cta:hover { background: #C20038; }
 
+    /* ── 지난 대회: race별 그룹 카드 ─────────────── */
+    .rc-card-grouped { display: block; cursor: default; }
+    .rc-card-grouped:hover { transform: none; }
+    .rc-meta-row {
+        display: flex; align-items: flex-start; justify-content: space-between;
+        gap: 1rem; flex-wrap: wrap; margin-bottom: 0.55rem;
+    }
+    .rc-meta-left { display: flex; align-items: center; flex-wrap: wrap; gap: 0.35rem; min-width: 0; }
+    .rc-meta-right { display: flex; align-items: center; gap: 0.35rem; flex-shrink: 0; }
+    .rc-meta-label { font-size: 0.72rem; color: #9AA1AE; white-space: nowrap; }
+    .rc-year-chips { display: inline-flex; flex-wrap: wrap; gap: 0.3rem; align-items: center; }
+    .rc-year-chip {
+        display: inline-block; font-size: 0.72rem; font-family: 'Archivo', sans-serif;
+        padding: 0.15rem 0.55rem; border-radius: 4px;
+        border: 1px solid #E8EAEE; background: #F7F8FA; color: #5A6170;
+        transition: border-color 0.15s, color 0.15s, background 0.15s;
+    }
+    .rc-year-chip:hover { border-color: rgba(232,0,67,0.3); color: #E80043; background: #FFF0F4; }
+    .rc-city-val {
+        font-size: 0.72rem; padding: 0.15rem 0.55rem; border-radius: 4px;
+        border: 1px solid #E8EAEE; background: #F7F8FA; color: #5A6170;
+    }
+
+    .rc-title-link { color: inherit; text-decoration: none; }
+    .rc-title-link:hover .rc-title { color: #E80043; }
+
     .star-svg { width: 13px; height: 13px; flex-shrink: 0; }
     .star-fill { fill: #F59E0B; }
     .star-empty-fill { fill: #E8EAEE; }
@@ -298,7 +324,7 @@
         <main class="main-content">
             <div class="main-bar">
                 <p class="main-count">
-                    다가오는 대회 <strong>{{ $upcoming->count() }}</strong> · 지난 대회 <strong>{{ $past->count() }}</strong>
+                    다가오는 대회 <strong>{{ $upcoming->count() }}</strong> · 지난 대회 <strong>{{ $past->count() }}</strong> · 공인 카탈로그 <strong>{{ $catalogOnly->count() }}</strong>
                 </p>
                 @auth
                     @if(in_array(auth()->user()->role ?? '', ['super_admin', 'region_admin']))
@@ -331,31 +357,25 @@
             </div>
 
             <div class="race-list">
-                @forelse($upcoming as $race)
+                @forelse($upcoming as $ed)
                     @php
-                        $distArr     = $parseDist($race->distances ?? null);
-                        $reviewCount = (int) ($race->review_count ?? 0);
-                        $avgRating   = (float) ($race->avg_rating ?? 0);
+                        $distArr = $parseDist($ed->distances ?? null);
                     @endphp
-                    <a href="{{ route('races.show', $race->id) }}" class="rc-card">
+                    <a href="{{ route('races.show-edition', [$ed->race_id, $ed->edition_id]) }}#reviews" class="rc-card">
                         <div class="rc-top">
                             <div class="badge-row">
-                                @if($waLabelClassOf($race->wa_label))
-                                    <span class="badge {{ $waLabelClassOf($race->wa_label) }}">{{ $waLabels[$race->wa_label] }}</span>
+                                @if($waLabelClassOf($ed->wa_label))
+                                    <span class="badge {{ $waLabelClassOf($ed->wa_label) }}">{{ $waLabels[$ed->wa_label] }}</span>
                                 @endif
-                                @if($race->latest_edition_year)
-                                    <span class="badge-year">{{ $race->latest_edition_year }}</span>
-                                @elseif(empty($race->latest_edition_id))
-                                    <span class="badge" style="background:#F3F4F6;color:#6B7280;border:1px solid #E5E7EB;">예정/참고</span>
-                                @endif
-                                @if($race->city)
-                                    <span class="badge-city">{{ $race->city }}</span>
+                                <span class="badge-year">{{ $ed->year }}</span>
+                                @if($ed->city)
+                                    <span class="badge-city">{{ $ed->city }}</span>
                                 @endif
                             </div>
                         </div>
 
                         <div class="rc-title-row">
-                            <span class="rc-title">{{ $race->name }}</span>
+                            <span class="rc-title">{{ $ed->name }}</span>
                         </div>
 
                         @if(count($distArr) > 0)
@@ -367,11 +387,7 @@
                         @endif
 
                         <div class="rc-footer">
-                            @if($reviewCount > 0)
-                                <span class="rc-no-data">예년 평균 ★ {{ number_format($avgRating, 1) }} ({{ $reviewCount }}건)</span>
-                            @else
-                                <span class="rc-no-data">신규 대회 · 아직 리뷰 없음</span>
-                            @endif
+                            <span class="rc-no-data">{{ $ed->race_date ? \Carbon\Carbon::parse($ed->race_date)->format('Y.m.d').' 예정' : '대회일 미정' }} · 기대/개선 의견 등록 가능</span>
                             <span class="rc-link">대회 상세보기 →</span>
                         </div>
                     </a>
@@ -392,37 +408,41 @@
             </div>
 
             <div class="race-list">
-                @forelse($past as $race)
+                @forelse($past as $group)
                     @php
-                        $distArr     = $parseDist($race->distances ?? null);
-                        $reviewCount = (int) ($race->review_count ?? 0);
-                        $avgRating   = (float) ($race->avg_rating ?? 0);
+                        $distArr     = $parseDist($group->distances ?? null);
+                        $reviewCount = (int) ($group->total_review_count ?? 0);
+                        $avgRating   = $group->avg_rating;
                         $aiSummary   = null;
-                        if (!empty($race->ai_race_summary)) {
-                            $decoded   = json_decode($race->ai_race_summary, true);
-                            $aiSummary = $decoded['summary'] ?? null;
+                        if (!empty($group->ai_race_summary)) {
+                            $decoded   = json_decode($group->ai_race_summary, true);
+                            $aiSummary = is_array($decoded) ? ($decoded['summary'] ?? null) : null;
                         }
                     @endphp
-                    <a href="{{ route('races.show', $race->id) }}" class="rc-card">
-                        <div class="rc-top">
-                            <div class="badge-row">
-                                @if($waLabelClassOf($race->wa_label))
-                                    <span class="badge {{ $waLabelClassOf($race->wa_label) }}">{{ $waLabels[$race->wa_label] }}</span>
-                                @endif
-                                @if($race->latest_edition_year)
-                                    <span class="badge-year">{{ $race->latest_edition_year }}</span>
-                                @elseif(empty($race->latest_edition_id))
-                                    <span class="badge" style="background:#F3F4F6;color:#6B7280;border:1px solid #E5E7EB;">예정/참고</span>
-                                @endif
-                                @if($race->city)
-                                    <span class="badge-city">{{ $race->city }}</span>
-                                @endif
+                    <div class="rc-card rc-card-grouped">
+                        <div class="rc-meta-row">
+                            <div class="rc-meta-left">
+                                <span class="rc-meta-label">개최년도 :</span>
+                                <span class="rc-year-chips">
+                                    @foreach($group->editions as $ed)
+                                        <a href="{{ route('races.show-edition', [$group->race_id, $ed->edition_id]) }}#reviews"
+                                           class="rc-year-chip">{{ $ed->year }}</a>
+                                    @endforeach
+                                </span>
                             </div>
+                            @if($group->city)
+                                <div class="rc-meta-right">
+                                    <span class="rc-meta-label">개최도시 :</span>
+                                    <span class="rc-city-val">{{ $group->city }}</span>
+                                </div>
+                            @endif
                         </div>
 
                         <div class="rc-title-row">
-                            <span class="rc-title">{{ $race->name }}</span>
-                            @if($reviewCount > 0)
+                            <a href="{{ route('races.show-edition', [$group->race_id, $group->current_year_edition_id]) }}#reviews" class="rc-title-link">
+                                <span class="rc-title">{{ $group->name }}</span>
+                            </a>
+                            @if($reviewCount > 0 && $avgRating !== null)
                                 <span class="rc-rating-mini">
                                     <svg class="star-svg" viewBox="0 0 24 24"><polygon class="star-fill" points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
                                     <span class="rc-score">{{ number_format($avgRating, 1) }}</span>
@@ -430,6 +450,12 @@
                                 </span>
                             @endif
                         </div>
+
+                        @if($waLabelClassOf($group->wa_label))
+                            <div class="badge-row" style="margin-top:0.45rem;">
+                                <span class="badge {{ $waLabelClassOf($group->wa_label) }}">{{ $waLabels[$group->wa_label] }}</span>
+                            </div>
+                        @endif
 
                         @if(count($distArr) > 0)
                             <div class="dist-tags">
@@ -447,14 +473,56 @@
                             @else
                                 <span class="rc-no-data">아직 등록된 리뷰가 없습니다</span>
                             @endif
-                            <span class="rc-cta">후기 보기 →</span>
+                            <a href="{{ route('races.show-edition', [$group->race_id, $group->current_year_edition_id]) }}#reviews" class="rc-cta">후기 보기 →</a>
                         </div>
-                    </a>
+                    </div>
                 @empty
                     <div class="empty">
                         <div class="empty-icon">🏁</div>
                         <p class="empty-title">조건에 맞는 지난 대회가 없습니다.</p>
                         <p class="empty-sub">다른 필터로 다시 검색해보세요.</p>
+                    </div>
+                @endforelse
+            </div>
+
+            {{-- ── 공인 카탈로그 (참고용 — 리뷰 작성 불가) ── --}}
+            <div class="section-head">
+                <span class="section-title">세계육상연맹(WA) 공인 대회 카탈로그</span>
+                <span class="section-count">{{ $catalogOnly->count() }}개</span>
+                <div class="section-line"></div>
+            </div>
+            <p style="margin:-0.5rem 0 1rem;color:#9CA3AF;font-size:0.8rem;">
+                아직 회차(edition)가 등록되지 않아 리뷰 작성은 불가합니다. WA 공인 현황 참고용 목록입니다.
+            </p>
+
+            <div class="race-list">
+                @forelse($catalogOnly as $race)
+                    <a href="{{ route('races.show', $race->id) }}" class="rc-card">
+                        <div class="rc-top">
+                            <div class="badge-row">
+                                @if($waLabelClassOf($race->wa_label))
+                                    <span class="badge {{ $waLabelClassOf($race->wa_label) }}">{{ $waLabels[$race->wa_label] }}</span>
+                                @endif
+                                <span class="badge" style="background:#F3F4F6;color:#6B7280;border:1px solid #E5E7EB;">참고용</span>
+                                @if($race->city)
+                                    <span class="badge-city">{{ $race->city }}</span>
+                                @endif
+                            </div>
+                        </div>
+
+                        <div class="rc-title-row">
+                            <span class="rc-title">{{ $race->name }}</span>
+                        </div>
+
+                        <div class="rc-footer">
+                            <span class="rc-no-data">리뷰 작성 불가 · 공인 정보 참고용</span>
+                            <span class="rc-link">대회 정보 보기 →</span>
+                        </div>
+                    </a>
+                @empty
+                    <div class="empty">
+                        <div class="empty-icon">📋</div>
+                        <p class="empty-title">조건에 맞는 카탈로그 대회가 없습니다.</p>
                     </div>
                 @endforelse
             </div>

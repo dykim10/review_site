@@ -28,6 +28,7 @@ Route::middleware('auth')->group(function () {
 // 공개 - 대회 목록/상세
 Route::get('/races', [RaceController::class, 'index'])->name('races.index');
 Route::get('/races/{race}', [RaceController::class, 'show'])->name('races.show');
+Route::get('/races/{race}/editions/{edition}', [RaceController::class, 'showEdition'])->name('races.show-edition');
 
 // 리뷰 - 인증 필요
 Route::middleware(['auth', 'verified'])->group(function () {

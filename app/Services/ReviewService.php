@@ -16,12 +16,11 @@ class ReviewService
 {
     public function __construct(private HashtagService $hashtagService) {}
 
-    public function getByRace(Race $race, int $perPage = 10): LengthAwarePaginator
+    /** 특정 edition(연도)의 리뷰만 — 상세 페이지 연도 탭용. */
+    public function getByEdition(RaceEdition $edition, int $perPage = 10): LengthAwarePaginator
     {
-        $editionIds = $race->editions()->pluck('id');
-
         return Review::with(['user', 'hashtags', 'raceEdition'])
-            ->whereIn('race_edition_id', $editionIds)
+            ->where('race_edition_id', $edition->id)
             ->orderByDesc('created_at')
             ->paginate($perPage);
     }
@@ -205,10 +204,9 @@ class ReviewService
         return $data;
     }
 
-    public function avgRating(Race $race): ?float
+    public function avgRatingForEdition(RaceEdition $edition): ?float
     {
-        $editionIds = $race->editions()->pluck('id');
-        $avg        = Review::whereIn('race_edition_id', $editionIds)->avg('rating');
+        $avg = Review::where('race_edition_id', $edition->id)->avg('rating');
 
         return $avg ? round($avg, 1) : null;
     }

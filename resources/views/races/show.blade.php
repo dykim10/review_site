@@ -3,7 +3,8 @@
 
 @push('styles')
 <style>
-    :root {
+    /* hero = 유일한 다크 구간 (index.blade.php와 동일 규칙) */
+    .race-hero {
         --bg:       #0A0A0A;
         --surface:  #141414;
         --surface2: #1C1C1C;
@@ -14,6 +15,23 @@
         --text2:    #AAAAAA;
         --muted:    #666;
         --star:     #FFB800;
+        --star-off: #2C2C2C;
+    }
+
+    /* 본문 = 라이트 + 핑크 액센트 (index·layouts.review와 동일) */
+    .page-wrap {
+        --bg:       #F7F8FA;
+        --surface:  #FFFFFF;
+        --surface2: #F7F8FA;
+        --border:   #E8EAEE;
+        --accent:   #E80043;
+        --accent-d: #C20038;
+        --text:     #16181D;
+        --text2:    #5A6170;
+        --muted:    #9AA1AE;
+        --star:     #F59E0B;
+        --star-off: #E8EAEE;
+        background: var(--bg);
     }
 
     /* ── RACE HERO ───────────────────────────────── */
@@ -63,6 +81,8 @@
     .wa-link:hover { color: var(--accent-d); }
 
     .race-name { font-family: 'Bebas Neue', 'Archivo', sans-serif; font-size: clamp(2.2rem, 5.5vw, 4rem); letter-spacing: 0.04em; line-height: 0.95; color: var(--text); margin-bottom: 1.1rem; }
+    .race-name-link { color: inherit; text-decoration: none; display: block; }
+    .race-name-link:hover .race-name { color: var(--accent); }
 
     .hero-meta { display: flex; flex-wrap: wrap; gap: 0.35rem 1.5rem; font-size: 0.82rem; color: var(--text2); margin-bottom: 1.25rem; }
     .hero-meta-item { display: flex; align-items: center; gap: 0.35rem; }
@@ -81,7 +101,11 @@
     .page-wrap { max-width: 1100px; margin: 0 auto; padding: 2.5rem 1.5rem 5rem; display: grid; grid-template-columns: 1fr 270px; gap: 2.5rem; align-items: start; }
 
     /* ── CARDS ───────────────────────────────────── */
-    .info-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.4rem 1.5rem; margin-bottom: 1.5rem; }
+    .info-card {
+        background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+        padding: 1.4rem 1.5rem; margin-bottom: 1.5rem;
+        box-shadow: 0 1px 3px rgba(22,24,29,0.05);
+    }
     .card-heading { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); margin-bottom: 1.25rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--border); }
 
     .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem 2rem; }
@@ -95,7 +119,8 @@
         margin-bottom: 1.5rem;
         border-radius: 12px;
         padding: 1px;
-        background: linear-gradient(135deg, rgba(255,107,53,0.4), rgba(255,184,0,0.2) 50%, rgba(255,107,53,0.1));
+        background: linear-gradient(135deg, rgba(232,0,67,0.2), rgba(245,158,11,0.12) 50%, rgba(232,0,67,0.06));
+        box-shadow: 0 1px 3px rgba(22,24,29,0.05);
     }
     .ai-card-inner { background: var(--surface); border-radius: 11px; padding: 1.4rem 1.5rem; }
 
@@ -108,7 +133,7 @@
     .ai-summary-text { font-size: 0.85rem; color: var(--text2); line-height: 1.8; margin-bottom: 1.25rem; }
 
     .ai-points-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1.1rem; }
-    .ai-point-card { background: var(--bg); border-radius: 8px; padding: 0.9rem 1rem; border: 1px solid var(--border); }
+    .ai-point-card { background: var(--surface2); border-radius: 8px; padding: 0.9rem 1rem; border: 1px solid var(--border); }
     .ai-point-label { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 0.7rem; }
     .ai-point-label.pos { color: #4ADE80; }
     .ai-point-label.neg { color: #F97316; }
@@ -117,21 +142,55 @@
     .ai-point-list li::before { content: '·'; color: var(--muted); flex-shrink: 0; margin-top: 0.05rem; }
 
     .ai-keywords { display: flex; flex-wrap: wrap; gap: 0.4rem; }
-    .ai-kw { font-size: 0.68rem; padding: 0.2rem 0.6rem; border-radius: 4px; background: rgba(255,107,53,0.08); color: var(--accent); border: 1px solid rgba(255,107,53,0.15); }
+    .ai-kw { font-size: 0.68rem; padding: 0.2rem 0.6rem; border-radius: 4px; background: rgba(232,0,67,0.07); color: var(--accent); border: 1px solid rgba(232,0,67,0.18); }
+
+    /* ── EDITION YEAR TABS ─────────────────────── */
+    .edition-tabs {
+        display: flex; flex-wrap: wrap; gap: 0.4rem;
+        margin-bottom: 1.25rem;
+    }
+    .edition-tab {
+        display: inline-flex; align-items: center; gap: 0.35rem;
+        padding: 0.38rem 0.9rem; border-radius: 999px;
+        border: 1px solid var(--border); font-size: 0.78rem; font-weight: 500;
+        color: var(--text2); background: #fff; transition: all 0.15s;
+    }
+    .edition-tab:hover { border-color: rgba(232,0,67,0.3); color: var(--accent); }
+    .edition-tab-active {
+        background: #FFF0F4; border-color: rgba(232,0,67,0.25);
+        color: var(--accent); font-weight: 600;
+    }
+    .edition-tab-count { font-size: 0.68rem; font-family: 'Archivo', sans-serif; color: var(--muted); }
+    .edition-tab-active .edition-tab-count { color: var(--accent); opacity: 0.8; }
+
+    #reviews { scroll-margin-top: 5rem; }
 
     /* ── REVIEWS ─────────────────────────────────── */
     .section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.5rem; }
-    .section-title { font-family: 'Bebas Neue', 'Archivo', sans-serif; font-size: 1.55rem; letter-spacing: 0.06em; color: var(--text); display: flex; align-items: baseline; gap: 0.5rem; }
-    .section-title-count { font-size: 1rem; color: var(--muted); }
+    .section-title {
+        font-family: 'Pretendard', sans-serif; font-size: 1.1rem; font-weight: 700;
+        letter-spacing: -0.01em; color: var(--text); display: flex; align-items: baseline; gap: 0.5rem;
+    }
+    .section-title-count { font-size: 0.78rem; font-weight: 400; color: var(--muted); font-family: 'Archivo', sans-serif; }
 
-    .write-btn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.42rem 1rem; background: var(--accent); color: #fff; border-radius: 7px; font-size: 0.78rem; font-weight: 600; transition: background 0.15s; white-space: nowrap; }
+    .write-btn {
+        display: inline-flex; align-items: center; gap: 0.4rem;
+        padding: 0.4rem 0.95rem; background: var(--accent); color: #fff;
+        border-radius: 999px; font-size: 0.78rem; font-weight: 600;
+        transition: background 0.15s; white-space: nowrap;
+    }
     .write-btn:hover { background: var(--accent-d); }
     .write-btn-outline { background: transparent; border: 1px solid var(--accent); color: var(--accent); }
-    .write-btn-outline:hover { background: rgba(255,107,53,0.08); }
+    .write-btn-outline:hover { background: rgba(232,0,67,0.06); }
 
-    .review-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1.2rem 1.4rem; margin-bottom: 0.75rem; position: relative; overflow: hidden; transition: border-color 0.2s; }
-    .review-card::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, var(--accent), rgba(255,107,53,0.3) 50%, transparent); opacity: 0; transition: opacity 0.25s; }
-    .review-card:hover { border-color: rgba(255,107,53,0.2); }
+    .review-card {
+        background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+        padding: 1.2rem 1.4rem; margin-bottom: 0.75rem; position: relative; overflow: hidden;
+        transition: border-color 0.2s, box-shadow 0.2s;
+        box-shadow: 0 1px 3px rgba(22,24,29,0.04);
+    }
+    .review-card::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, var(--accent), rgba(232,0,67,0.25) 50%, transparent); opacity: 0; transition: opacity 0.25s; }
+    .review-card:hover { border-color: rgba(232,0,67,0.25); box-shadow: 0 4px 14px rgba(22,24,29,0.06); }
     .review-card:hover::after { opacity: 1; }
 
     .review-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 0.9rem; }
@@ -146,16 +205,16 @@
     .review-stars { display: flex; gap: 2px; }
     .star-icon { font-size: 0.85rem; }
     .star-on { color: var(--star); }
-    .star-off { color: #2C2C2C; }
+    .star-off { color: var(--star-off); }
 
     .review-content { font-size: 0.85rem; color: var(--text2); line-height: 1.78; white-space: pre-line; }
     .review-tags { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.6rem; }
-    .review-tag { font-size: 0.74rem; color: var(--accent); background: rgba(255,107,53,0.08); border: 1px solid rgba(255,107,53,0.2); border-radius: 4px; padding: 0.14rem 0.45rem; font-weight: 500; }
+    .review-tag { font-size: 0.74rem; color: var(--accent); background: rgba(232,0,67,0.07); border: 1px solid rgba(232,0,67,0.18); border-radius: 4px; padding: 0.14rem 0.45rem; font-weight: 500; }
     .review-images { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.75rem; }
     .review-img-thumb { width: 72px; height: 72px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border); cursor: pointer; transition: opacity 0.15s, border-color 0.15s; }
     .review-img-thumb:hover { opacity: 0.82; border-color: var(--accent); }
 
-    .review-ai { margin-top: 1rem; padding: 0.9rem 1rem; border-radius: 7px; background: var(--bg); border: 1px solid var(--border); }
+    .review-ai { margin-top: 1rem; padding: 0.9rem 1rem; border-radius: 8px; background: var(--surface2); border: 1px solid var(--border); }
     .review-ai-head { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.45rem; }
     .review-ai-label { font-size: 0.65rem; font-weight: 700; color: var(--accent); letter-spacing: 0.12em; text-transform: uppercase; }
     .sentiment { font-size: 0.65rem; padding: 0.1rem 0.4rem; border-radius: 3px; }
@@ -172,7 +231,7 @@
     .ra-del:hover { border-color: #F87171; background: rgba(248,113,113,0.06); }
 
     /* ── REVIEWS EMPTY ───────────────────────────── */
-    .reviews-empty { text-align: center; padding: 3.5rem 2rem; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+    .reviews-empty { text-align: center; padding: 3.5rem 2rem; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 1px 3px rgba(22,24,29,0.05); }
     .reviews-empty-icon { font-size: 2.4rem; margin-bottom: 0.75rem; }
     .reviews-empty-text { font-size: 0.88rem; color: var(--text2); }
     .reviews-empty-sub { font-size: 0.78rem; color: var(--muted); margin-top: 0.35rem; }
@@ -182,9 +241,9 @@
 
     /* ── SIDEBAR ─────────────────────────────────── */
     .sidebar { position: sticky; top: 70px; display: flex; flex-direction: column; gap: 0.75rem; }
-    .s-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.3rem 1.4rem; }
+    .s-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.3rem 1.4rem; box-shadow: 0 1px 3px rgba(22,24,29,0.05); }
     .s-heading { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 1.1rem; }
-    .s-row { display: flex; justify-content: space-between; align-items: baseline; padding: 0.5rem 0; border-bottom: 1px solid rgba(36,36,36,0.7); }
+    .s-row { display: flex; justify-content: space-between; align-items: baseline; padding: 0.5rem 0; border-bottom: 1px solid var(--border); }
     .s-row:last-child { border-bottom: none; }
     .s-key { font-size: 0.75rem; color: var(--muted); }
     .s-val { font-size: 0.82rem; color: var(--text2); font-weight: 500; text-align: right; }
@@ -197,7 +256,7 @@
     .action-primary { background: var(--accent); color: #fff; border: 1px solid var(--accent); }
     .action-primary:hover { background: var(--accent-d); border-color: var(--accent-d); }
     .action-reg { background: transparent; border: 1px solid var(--accent); color: var(--accent); }
-    .action-reg:hover { background: rgba(255,107,53,0.08); }
+    .action-reg:hover { background: rgba(232,0,67,0.06); }
     .action-secondary { background: transparent; border: 1px solid var(--border); color: var(--text2); }
     .action-secondary:hover { border-color: var(--text2); color: var(--text); }
     .action-disabled { background: var(--surface2); color: var(--muted); cursor: default; border: 1px solid var(--border); }
@@ -272,6 +331,9 @@
         'label'    => '세계육상연맹 공인 기준을 충족한 대회입니다.',
         default    => '',
     };
+    $currentCalendarYear = (int) date('Y');
+    $reviewsEdition = $editions->first(fn ($e) => (int) ($e->year ?? 0) === $currentCalendarYear)
+        ?? $latestEdition;
 @endphp
 
 <section class="race-hero">
@@ -293,7 +355,13 @@
                     @endif
                 </div>
 
-                <h1 class="race-name">{{ $race->name }}</h1>
+                @if($reviewsEdition)
+                    <a href="{{ route('races.show-edition', [$race->id, $reviewsEdition->id]) }}#reviews" class="race-name-link">
+                        <h1 class="race-name">{{ $race->name }}</h1>
+                    </a>
+                @else
+                    <h1 class="race-name">{{ $race->name }}</h1>
+                @endif
 
                 @unless($latestEdition)
                     <p style="margin-top:0.65rem;font-size:0.82rem;color:var(--muted);">개최 정보 준비 중 — 시즌 일정이 등록되면 표시됩니다.</p>
@@ -334,7 +402,7 @@
                         <div class="score-num">{{ number_format($avgRating, 1) }}</div>
                         <div class="score-stars">
                             @for($i = 1; $i <= 5; $i++)
-                                <span style="font-size:0.9rem;color:{{ $i <= round($avgRating) ? 'var(--star)' : '#2C2C2C' }}">★</span>
+                                <span style="font-size:0.9rem;color:{{ $i <= round($avgRating) ? 'var(--star)' : 'var(--star-off)' }}">★</span>
                             @endfor
                         </div>
                         <div class="score-count">리뷰 {{ $reviews->total() }}건</div>
@@ -411,8 +479,13 @@
                 </thead>
                 <tbody>
                     @foreach($editions as $ed)
-                    <tr style="border-bottom:1px solid rgba(36,36,36,0.5);">
-                        <td style="padding:0.55rem 0.5rem;color:var(--text);font-weight:600;">{{ $ed->year ?: '-' }}</td>
+                    @php $isActiveEd = $latestEdition && $ed->id === $latestEdition->id; @endphp
+                    <tr style="border-bottom:1px solid var(--border);{{ $isActiveEd ? 'background:rgba(232,0,67,0.06);' : '' }}">
+                        <td style="padding:0.55rem 0.5rem;color:var(--text);font-weight:600;">
+                            <a href="{{ route('races.show-edition', [$race->id, $ed->id]) }}" style="color:inherit;text-decoration:none;{{ $isActiveEd ? 'font-weight:800;' : '' }}">
+                                {{ $ed->year ?: '-' }}{{ $isActiveEd ? ' (보는 중)' : '' }}
+                            </a>
+                        </td>
                         <td style="padding:0.55rem 0.5rem;color:var(--text2);">{{ $ed->race_date?->format('Y.m.d') ?? '-' }}</td>
                         <td style="padding:0.55rem 0.5rem;text-align:center;color:var(--text2);">{{ $ed->reviews_count }}</td>
                         <td style="padding:0.55rem 0.5rem;">
@@ -499,7 +572,7 @@
             </div>
             <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:0.75rem;">
                 @foreach($youtubeItems as $yt)
-                    <a href="{{ $yt['url'] ?? '#' }}" target="_blank" rel="noopener" style="display:block;border:1px solid var(--border);border-radius:8px;overflow:hidden;transition:border-color 0.2s;" onmouseover="this.style.borderColor='rgba(255,107,53,0.3)'" onmouseout="this.style.borderColor='var(--border)'">
+                    <a href="{{ $yt['url'] ?? '#' }}" target="_blank" rel="noopener" style="display:block;border:1px solid var(--border);border-radius:8px;overflow:hidden;transition:border-color 0.2s;" onmouseover="this.style.borderColor='rgba(232,0,67,0.3)'" onmouseout="this.style.borderColor='var(--border)'">
                         @if(!empty($yt['thumbnail_url']))
                             <div style="position:relative;aspect-ratio:16/9;overflow:hidden;background:var(--surface2);">
                                 <img src="{{ $yt['thumbnail_url'] }}" alt="" style="width:100%;height:100%;object-fit:cover;" loading="lazy">
@@ -548,7 +621,23 @@
         @endif
 
         {{-- Reviews --}}
-        <div>
+        <div id="reviews">
+            @if($editions->count() > 0)
+                <nav class="edition-tabs" aria-label="개최 연도">
+                    @foreach($editions as $ed)
+                        @php $isActiveTab = $latestEdition && $ed->id === $latestEdition->id; @endphp
+                        <a href="{{ route('races.show-edition', [$race->id, $ed->id]) }}#reviews"
+                           class="edition-tab {{ $isActiveTab ? 'edition-tab-active' : '' }}"
+                           @if($isActiveTab) aria-current="page" @endif>
+                            {{ $ed->year ?: '미정' }}
+                            @if($ed->reviews_count > 0)
+                                <span class="edition-tab-count">{{ $ed->reviews_count }}건</span>
+                            @endif
+                        </a>
+                    @endforeach
+                </nav>
+            @endif
+
             <div class="section-head">
                 <div class="section-title">
                     참가 후기
@@ -817,7 +906,7 @@
             {{-- 레이스 플랜 버튼 --}}
             @auth
                 @if($hasOfficialGpx && $latestEdition)
-                    <a href="{{ route('race-plan.create', $race) }}" class="action-btn" style="background:linear-gradient(135deg,rgba(255,107,53,0.15),rgba(255,184,0,0.08));border:1px solid rgba(255,107,53,0.35);color:var(--accent);display:flex;align-items:center;justify-content:center;gap:0.4rem;margin-top:0.5rem;">
+                    <a href="{{ route('race-plan.create', $race) }}" class="action-btn" style="background:linear-gradient(135deg,rgba(232,0,67,0.1),rgba(245,158,11,0.06));border:1px solid rgba(232,0,67,0.28);color:var(--accent);display:flex;align-items:center;justify-content:center;gap:0.4rem;margin-top:0.5rem;">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
                         AI 레이스 플랜 생성
                     </a>

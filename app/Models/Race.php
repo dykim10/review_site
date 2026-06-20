@@ -115,8 +115,12 @@ class Race extends Model
     }
 
     /**
-     * 대회 목록 — 다가오는 대회 / 지난 대회 리뷰 2단 구조 (TASK-1).
-     * 최신 에디션 연도 >= 올해 → 다가오는 대회, 그 외(과거 연도·에디션 없음) → 지난 대회.
+     * 대회 목록 — 다가오는 대회 / 지난 대회 리뷰 / 공인 카탈로그(참고용) 3단 구조 (TASK-1).
+     * 행 단위 = edition (race가 아님) — edition.status='upcoming' → 다가오는 대회(기대/개선 의견),
+     * status='ended' → 지난 대회 리뷰( race당 카드 1개 + 개최년도 칩 ). 같은 race의 여러 ended edition은
+     * past 그룹 안 editions[] 로 묶음. edition 자체가 없는 race(WA sync 카탈로그 등) → 공인 카탈로그.
+     * 연도 비교(latest_edition_year >= 올해)가 아니라 edition.status를 그대로 신뢰 — race_date가 같은 해
+     * 안에서도 이미 지난 대회(예: 2026-03 서울)와 아직 안 지난 대회(예: 2026-10 경주)가 섞이기 때문.
      * '접수 상태' 필터는 폐기, 국내외/공인등급/연도/리뷰유무로 대체.
      */
     public static function sectionedList(array $filters = []): array
@@ -126,69 +130,111 @@ class Race extends Model
         $year       = $filters['year']        ?? null;
         $hasReview  = $filters['has_review']  ?? null;
 
-        $where    = "WHERE r.is_active = true";
-        $bindings = [];
+        $baseWhere = "WHERE r.is_active = true";
+        $bindings  = [];
 
         if ($isDomestic !== null && $isDomestic !== '') {
-            $where .= " AND r.is_domestic = :is_domestic";
+            $baseWhere .= " AND r.is_domestic = :is_domestic";
             $bindings['is_domestic'] = (bool) $isDomestic;
         }
         if ($waLabel) {
-            $where .= " AND r.wa_label = :wa_label";
+            $baseWhere .= " AND r.wa_label = :wa_label";
             $bindings['wa_label'] = $waLabel;
         }
+
+        $editionWhere    = $baseWhere;
+        $editionBindings = $bindings;
         if ($year) {
-            $where .= " AND ed.year = :year";
-            $bindings['year'] = $year;
+            $editionWhere .= " AND ed.year = :year";
+            $editionBindings['year'] = $year;
         }
 
         $having = $hasReview ? "HAVING COUNT(rv.id) > 0" : "";
 
-        $rows = DB::select(
-            "SELECT r.*,
-                    ed.id AS latest_edition_id,
-                    ed.year AS latest_edition_year,
-                    ed.race_date, ed.status, ed.location, ed.entry_fee,
+        // edition 단위 행 — 같은 race가 여러 edition을 가지면 연도마다 한 행
+        $editionRows = collect(DB::select(
+            "SELECT r.id AS race_id, r.name, r.wa_label, r.city, r.distances, r.ai_race_summary,
+                    ed.id AS edition_id, ed.year, ed.race_date, ed.status, ed.location, ed.entry_fee,
                     COUNT(rv.id) AS review_count,
                     ROUND(AVG(rv.rating)::numeric, 1) AS avg_rating
              FROM review.races r
-             LEFT JOIN LATERAL (
-                 SELECT id, year, race_date, status, location, entry_fee
-                 FROM review.race_editions
-                 WHERE race_id = r.id
-                 ORDER BY year DESC NULLS LAST
-                 LIMIT 1
-             ) ed ON true
+             JOIN review.race_editions ed ON ed.race_id = r.id
              LEFT JOIN review.reviews rv ON rv.race_edition_id = ed.id
-             $where
+             $editionWhere
              GROUP BY r.id, ed.id, ed.year, ed.race_date, ed.status, ed.location, ed.entry_fee
              $having",
-            $bindings
-        );
+            $editionBindings
+        ));
 
-        $currentYear = now()->year;
-        $rows        = collect($rows);
-
-        $upcoming = $rows
-            ->filter(fn ($r) => $r->latest_edition_year !== null && $r->latest_edition_year >= $currentYear)
-            ->sortBy([
-                fn ($r) => $r->latest_edition_id === null ? 1 : 0,
-                'latest_edition_year',
-            ])
+        $upcoming = $editionRows
+            ->filter(fn ($r) => $r->status === 'upcoming')
+            ->sortBy(fn ($r) => $r->race_date ?? '9999-12-31')
             ->values();
 
-        $past = $rows
-            ->filter(fn ($r) => $r->latest_edition_year === null || $r->latest_edition_year < $currentYear)
-            ->sort(function ($a, $b) {
-                $hasEditionA = $a->latest_edition_id !== null ? 0 : 1;
-                $hasEditionB = $b->latest_edition_id !== null ? 0 : 1;
-                if ($hasEditionA !== $hasEditionB) {
-                    return $hasEditionA <=> $hasEditionB;
+        $pastFlat = $editionRows
+            ->filter(fn ($r) => $r->status === 'ended')
+            ->values();
+
+        $past = $pastFlat
+            ->groupBy('race_id')
+            ->map(function ($rows, $raceId) {
+                $first = $rows->first();
+                $editions = $rows
+                    ->sortByDesc(fn ($r) => $r->year ?? 0)
+                    ->values()
+                    ->map(fn ($r) => (object) [
+                        'edition_id'   => (int) $r->edition_id,
+                        'year'         => $r->year,
+                        'race_date'    => $r->race_date,
+                        'review_count' => (int) $r->review_count,
+                        'avg_rating'   => (float) ($r->avg_rating ?? 0),
+                    ]);
+
+                $totalReviews = $editions->sum('review_count');
+                $avgRating    = null;
+                if ($totalReviews > 0) {
+                    $weighted = $editions
+                        ->filter(fn ($e) => $e->review_count > 0)
+                        ->reduce(fn ($sum, $e) => $sum + ($e->avg_rating * $e->review_count), 0.0);
+                    $avgRating = round($weighted / $totalReviews, 1);
                 }
-                $yearCmp = ($b->latest_edition_year ?? 0) <=> ($a->latest_edition_year ?? 0);
-                return $yearCmp !== 0 ? $yearCmp : ($b->review_count <=> $a->review_count);
+
+                $linkEdition = $editions->first(fn ($e) => $e->review_count > 0) ?? $editions->first();
+                $latest      = $editions->first();
+                $currentYear = (int) date('Y');
+                $currentYearEdition = $editions->first(fn ($e) => (int) ($e->year ?? 0) === $currentYear)
+                    ?? $latest;
+
+                return (object) [
+                    'race_id'                    => (int) $raceId,
+                    'name'                       => $first->name,
+                    'city'                       => $first->city,
+                    'wa_label'                   => $first->wa_label,
+                    'distances'                  => $first->distances,
+                    'ai_race_summary'            => $first->ai_race_summary,
+                    'editions'                   => $editions,
+                    'total_review_count'         => $totalReviews,
+                    'avg_rating'                 => $avgRating,
+                    'link_edition_id'            => $linkEdition->edition_id,
+                    'current_year_edition_id'    => $currentYearEdition->edition_id,
+                    'sort_date'                  => $latest->race_date ?? (($latest->year ?? 0).'-01-01'),
+                ];
             })
+            ->sortByDesc('sort_date')
             ->values();
+
+        // edition이 아예 없는 race — WA sync 카탈로그 등 (리뷰 작성 불가, 참고용)
+        // year/has_review 필터는 edition 존재를 전제하므로, 걸려 있으면 카탈로그 섹션은 비움
+        $catalogOnly = collect();
+        if (! $year && ! $hasReview) {
+            $catalogOnly = collect(DB::select(
+                "SELECT r.* FROM review.races r
+                 $baseWhere
+                 AND NOT EXISTS (SELECT 1 FROM review.race_editions ed2 WHERE ed2.race_id = r.id)
+                 ORDER BY r.name",
+                $bindings
+            ));
+        }
 
         $years = collect(DB::select(
             "SELECT ed.year, COUNT(*) AS cnt
@@ -199,6 +245,6 @@ class Race extends Model
              ORDER BY ed.year DESC"
         ));
 
-        return ['upcoming' => $upcoming, 'past' => $past, 'years' => $years];
+        return ['upcoming' => $upcoming, 'past' => $past, 'catalogOnly' => $catalogOnly, 'years' => $years];
     }
 }

@@ -6,7 +6,10 @@ use App\Models\EditionFeedback;
 use App\Models\InstagramCache;
 use App\Models\Race;
 use App\Models\RaceCourse;
+use App\Models\RaceEdition;
+use App\Models\Review;
 use App\Models\YoutubeCache;
+use Illuminate\Http\Response;
 use App\Services\RaceService;
 use App\Services\ReviewService;
 use App\Services\WeatherService;
@@ -27,25 +30,50 @@ class RaceController extends Controller
         $stats    = $this->raceService->getGlobalStats();
 
         return view('races.index', [
-            'upcoming' => $sections['upcoming'],
-            'past'     => $sections['past'],
-            'years'    => $sections['years'],
-            'stats'    => $stats,
-            'filters'  => $filters,
+            'upcoming'    => $sections['upcoming'],
+            'past'        => $sections['past'],
+            'catalogOnly' => $sections['catalogOnly'],
+            'years'       => $sections['years'],
+            'stats'       => $stats,
+            'filters'     => $filters,
         ]);
     }
 
     public function show(Race $race)
     {
-        $reviews   = $this->reviewService->getByRace($race);
-        $avgRating = $this->reviewService->avgRating($race);
+        $editions      = $this->loadEditions($race);
+        $latestEdition = $editions->first();
 
-        $editions = $race->editions()
+        return $this->renderRaceDetail($race, $editions, $latestEdition);
+    }
+
+    /**
+     * 연도별 상세 — 목록(지난 대회 리뷰 등)에서 특정 edition을 클릭했을 때,
+     * 항상 최신 edition으로만 가는 show()와 달리 그 연도 그대로 보여준다.
+     */
+    public function showEdition(Race $race, RaceEdition $edition)
+    {
+        if ($edition->race_id !== $race->id) {
+            abort(Response::HTTP_NOT_FOUND);
+        }
+
+        $editions = $this->loadEditions($race);
+
+        return $this->renderRaceDetail($race, $editions, $edition);
+    }
+
+    private function loadEditions(Race $race)
+    {
+        return $race->editions()
             ->withCount('reviews')
             ->orderByDesc('year')
             ->get();
+    }
 
-        $latestEdition = $editions->first();
+    private function renderRaceDetail(Race $race, $editions, ?RaceEdition $latestEdition)
+    {
+        $reviews   = $latestEdition ? $this->reviewService->getByEdition($latestEdition) : Review::whereRaw('1=0')->paginate(10);
+        $avgRating = $latestEdition ? $this->reviewService->avgRatingForEdition($latestEdition) : null;
 
         $alreadyReviewed = false;
         $myReview        = null;
