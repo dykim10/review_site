@@ -23,7 +23,7 @@
         </div>
 
         <form method="POST" action="{{ route('admin.wa-label.sync') }}" style="margin-top:1.1rem;display:flex;flex-wrap:wrap;align-items:flex-end;gap:0.75rem;"
-              onsubmit="return confirm('선택 시즌 WA Label 목록을 DB에 동기화합니다. 계속할까요?')">
+              onsubmit="return confirm('선택 시즌 WA Label 목록을 DB에 동기화합니다. 1~3분 소요될 수 있습니다. 계속할까요?')">
             @csrf
             <div class="adm-field" style="margin:0;min-width:120px;">
                 <label class="adm-label" for="wa-year">시즌 (season)</label>
@@ -39,8 +39,33 @@
             <label style="display:flex;align-items:center;gap:0.35rem;font-size:0.8rem;color:#4B5563;padding-bottom:0.55rem;">
                 <input type="checkbox" name="organiser" value="1"> 주최/공식 URL
             </label>
-            <button type="submit" class="adm-btn adm-btn-primary">동기화 실행</button>
+            <button type="submit" class="adm-btn adm-btn-primary">동기화 실행 (백그라운드)</button>
         </form>
+
+        @if($waSyncStatuses->isNotEmpty())
+            <div style="margin-top:0.85rem;font-size:0.78rem;color:#4B5563;line-height:1.6;">
+                <strong>최근 동기화 상태</strong>
+                @foreach($waSyncStatuses as $y => $st)
+                    @php $status = $st['status'] ?? 'unknown'; @endphp
+                    <div>
+                        {{ $y }}:
+                        @if($status === 'running')
+                            <span style="color:#B45309;">진행 중…</span>
+                        @elseif($status === 'done')
+                            @php $r = $st['result'] ?? []; @endphp
+                            <span style="color:#047857;">완료</span>
+                            — 수집 {{ $r['total'] ?? '?' }} / 신규 {{ $r['inserted'] ?? '?' }} / 갱신 {{ $r['updated'] ?? '?' }}
+                        @elseif($status === 'failed')
+                            <span style="color:#B91C1C;">실패</span> — {{ Str::limit($st['error'] ?? '', 80) }}
+                        @endif
+                    </div>
+                @endforeach
+            </div>
+        @endif
+
+        <p style="margin:0.75rem 0 0;font-size:0.75rem;color:#9CA3AF;">
+            EC2 SSH: <code>php artisan review:wa-label-sync 2024</code> (nginx 타임아웃 없음). 번역·주최 URL은 체크박스 또는 <code>--translate --organiser</code>.
+        </p>
 
         <form method="POST" action="{{ route('admin.wa-label.preview') }}" style="margin-top:0.75rem;display:inline;">
             @csrf

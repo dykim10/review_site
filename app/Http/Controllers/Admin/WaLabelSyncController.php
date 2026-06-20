@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Services\WaLabelSyncService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Log;
 
 class WaLabelSyncController extends Controller
 {
@@ -22,23 +24,32 @@ class WaLabelSyncController extends Controller
         $translate = $request->boolean('translate');
         $organiser = $request->boolean('organiser');
 
-        try {
-            $result = $this->waLabelSync->syncSeason($year, $translate, $organiser);
-        } catch (\Throwable $e) {
-            return back()->with('error', "WA 동기화 실패 ({$year}): ".$e->getMessage());
+        $status = $this->waLabelSync->getSyncStatus($year);
+        if (($status['status'] ?? null) === 'running') {
+            return back()->with('error', "{$year} 시즌 동기화가 이미 진행 중입니다. 1~3분 후 새로고침하세요.");
         }
 
-        $msg = sprintf(
-            '%d 시즌 동기화 완료 — 수집 %d건 / 신규 %d / 갱신 %d / 비공인 %d / skip %d',
-            $year,
-            $result['total'] ?? 0,
-            $result['inserted'] ?? 0,
-            $result['updated'] ?? 0,
-            $result['decertified'] ?? 0,
-            $result['skipped'] ?? 0,
-        );
+        $this->waLabelSync->markRunning($year);
 
-        return back()->with('success', $msg);
+        Bus::dispatchAfterResponse(function () use ($year, $translate, $organiser): void {
+            set_time_limit(0);
+
+            try {
+                $result = app(WaLabelSyncService::class)->syncSeason($year, $translate, $organiser);
+                app(WaLabelSyncService::class)->markDone($year, $result);
+            } catch (\Throwable $e) {
+                app(WaLabelSyncService::class)->markFailed($year, $e->getMessage());
+                Log::error('WA Label background sync failed', [
+                    'year'  => $year,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        });
+
+        return back()->with(
+            'success',
+            "{$year} 시즌 동기화를 시작했습니다. 1~3분 소요될 수 있습니다. 완료 후 이 페이지를 새로고침하세요."
+        );
     }
 
     public function preview(Request $request)

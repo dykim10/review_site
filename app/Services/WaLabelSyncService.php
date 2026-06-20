@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -12,6 +13,48 @@ class WaLabelSyncService
     public function __construct()
     {
         $this->coreApiUrl = rtrim(config('services.core_api.url', 'http://localhost:8100'), '/');
+    }
+
+    public static function cacheKey(int $year): string
+    {
+        return "wa_label_sync:{$year}";
+    }
+
+    /** @return array<string, mixed>|null */
+    public function getSyncStatus(int $year): ?array
+    {
+        $status = Cache::get(self::cacheKey($year));
+
+        return is_array($status) ? $status : null;
+    }
+
+    public function markRunning(int $year): void
+    {
+        Cache::put(self::cacheKey($year), [
+            'status'     => 'running',
+            'started_at' => now()->toIso8601String(),
+        ], 7200);
+    }
+
+    /** @param array<string, mixed> $result */
+    public function markDone(int $year, array $result): void
+    {
+        $prev = $this->getSyncStatus($year) ?? [];
+        Cache::put(self::cacheKey($year), [
+            'status'      => 'done',
+            'started_at'  => $prev['started_at'] ?? now()->toIso8601String(),
+            'finished_at' => now()->toIso8601String(),
+            'result'      => $result,
+        ], 7200);
+    }
+
+    public function markFailed(int $year, string $message): void
+    {
+        Cache::put(self::cacheKey($year), [
+            'status'      => 'failed',
+            'finished_at' => now()->toIso8601String(),
+            'error'       => $message,
+        ], 7200);
     }
 
     /**
@@ -27,7 +70,8 @@ class WaLabelSyncService
             'organiser' => $organiser ? 'true' : 'false',
         ]);
 
-        $response = Http::timeout(180)
+        $response = Http::timeout(600)
+            ->connectTimeout(15)
             ->acceptJson()
             ->post("{$this->coreApiUrl}/api/races/sync?{$query}");
 
@@ -58,7 +102,8 @@ class WaLabelSyncService
             'organiser' => $organiser ? 'true' : 'false',
         ]);
 
-        $response = Http::timeout(120)
+        $response = Http::timeout(180)
+            ->connectTimeout(15)
             ->acceptJson()
             ->get("{$this->coreApiUrl}/api/races/crawl-wa-labels?{$query}");
 

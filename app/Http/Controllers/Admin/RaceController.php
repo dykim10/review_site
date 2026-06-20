@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreRaceRequest;
 use App\Models\Race;
 use App\Services\RaceService;
+use App\Services\WaLabelSyncService;
+use Illuminate\Support\Facades\Cache;
 
 class RaceController extends Controller
 {
@@ -14,7 +16,11 @@ class RaceController extends Controller
     public function index()
     {
         $races = $this->raceService->getAdminList();
-        return view('admin.races.index', compact('races'));
+        $waSyncStatuses = collect([2026, 2025, 2024, 2023, 2022])
+            ->mapWithKeys(fn (int $y) => [$y => Cache::get(WaLabelSyncService::cacheKey($y))])
+            ->filter();
+
+        return view('admin.races.index', compact('races', 'waSyncStatuses'));
     }
 
     public function create()
