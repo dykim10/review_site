@@ -22,14 +22,14 @@ class SeedPilotRaces extends Command
                             {--skip-weather : ASOS 수집 생략}
                             {--force : 기존 edition 있어도 추가 생성}';
 
-    protected $description = 'TASK-16: WA 인증 4대회 pilot edition + GPX + (선택) 스모크 데이터';
+    protected $description = 'TASK-16: 국내 pilot 4대회 races+edition + GPX (race_id 하드코딩 없음)';
 
-    /** @var list<array{race_id:int,key:string,name:string,city:string,location:string,weather_stn_id:int}> */
+    /** @var list<array{key:string,name:string,city:string,location:string,weather_stn_id:int}> */
     private array $pilots = [
-        ['race_id' => 2403, 'key' => 'seoul', 'name' => '서울국제마라톤', 'city' => 'Seoul', 'location' => '서울', 'weather_stn_id' => 108],
-        ['race_id' => 2430, 'key' => 'daegu', 'name' => '대구마라톤', 'city' => 'Daegu', 'location' => '대구', 'weather_stn_id' => 143],
-        ['race_id' => 2701, 'key' => 'gyeongju', 'name' => '경주마라톤', 'city' => '경주', 'location' => '경주', 'weather_stn_id' => 136],
-        ['race_id' => 2558, 'key' => 'gunsan', 'name' => '군산 새만금 국제 마라톤', 'city' => 'Gunsan', 'location' => '군산', 'weather_stn_id' => 146],
+        ['key' => 'seoul', 'name' => '서울국제마라톤', 'city' => 'Seoul', 'location' => '서울', 'weather_stn_id' => 108],
+        ['key' => 'daegu', 'name' => '대구마라톤', 'city' => 'Daegu', 'location' => '대구', 'weather_stn_id' => 143],
+        ['key' => 'gyeongju', 'name' => '경주마라톤', 'city' => '경주', 'location' => '경주', 'weather_stn_id' => 136],
+        ['key' => 'gunsan', 'name' => '군산 새만금 국제 마라톤', 'city' => 'Gunsan', 'location' => '군산', 'weather_stn_id' => 146],
     ];
 
     public function handle(WeatherService $weatherService): int
@@ -47,7 +47,10 @@ class SeedPilotRaces extends Command
         if ($editionsCount > 0 && $this->option('force')) {
             $this->line("기존 edition {$editionsCount}건 — smoke 데이터만 보완합니다.");
             if ($this->option('smoke')) {
-                $seoul = RaceEdition::where('race_id', 2403)->where('year', 2025)->first();
+                $seoulRace = Race::where('name', '서울국제마라톤')->first();
+                $seoul = $seoulRace
+                    ? RaceEdition::where('race_id', $seoulRace->id)->where('year', 2025)->first()
+                    : null;
                 $upcoming = RaceEdition::where('status', 'upcoming')->whereNull('race_date')->first();
                 if ($seoul) {
                     $this->seedSmokeData($seoul, $upcoming);
@@ -58,16 +61,27 @@ class SeedPilotRaces extends Command
             return 0;
         }
 
-        $this->info("races 베이스: {$racesCount}건");
+        $this->info("races 베이스: {$racesCount}건 (pilot 4개는 없으면 생성)");
 
         $created = [];
+        $pilotRaceIds = [];
 
         foreach ($this->pilots as $pilot) {
-            $race = Race::find($pilot['race_id']);
-            if (! $race) {
-                $this->error("race_id={$pilot['race_id']} ({$pilot['name']}) 없음 — skip");
+            $race = Race::firstOrCreate(
+                ['name' => $pilot['name']],
+                [
+                    'city'          => $pilot['city'],
+                    'is_domestic'   => true,
+                    'country'       => '대한민국',
+                    'is_active'     => true,
+                    'is_certified'  => false,
+                    'wa_calendar'   => [],
+                ]
+            );
 
-                continue;
+            $pilotRaceIds[] = $race->id;
+            if ($race->wasRecentlyCreated) {
+                $this->line("  [race] 생성 #{$race->id} {$race->name}");
             }
 
             $edition = RaceEdition::create([
@@ -108,11 +122,12 @@ class SeedPilotRaces extends Command
             }
 
             $created[$pilot['key']] = $edition;
-            $this->info("✓ {$race->name} → edition #{$edition->id} (ended, GPX)");
+            $this->info("✓ {$race->name} (race #{$race->id}) → edition #{$edition->id} (ended, GPX)");
         }
 
-        $upcomingRace = Race::whereNotIn('id', collect($this->pilots)->pluck('race_id'))
+        $upcomingRace = Race::whereNotIn('id', $pilotRaceIds)
             ->where('is_active', true)
+            ->where('is_domestic', true)
             ->where('name', 'ilike', '%마라톤%')
             ->orderBy('id')
             ->first();
@@ -134,6 +149,8 @@ class SeedPilotRaces extends Command
                 'source'         => 'pilot_seed',
             ]);
             $this->info("✓ upcoming: {$upcomingRace->name} → edition #{$upcomingEdition->id}");
+        } else {
+            $this->line('  upcoming 후보 없음 (국내 마라톤 카탈로그 부족 — skip)');
         }
 
         if ($this->option('smoke') && ! empty($created)) {

@@ -14,6 +14,14 @@ class VerifyRemodel extends Command
 
     protected $description = 'TASK-17: REVIEW 데이터 리모델 통합 검증';
 
+    /** @var list<string> */
+    private array $pilotNames = [
+        '서울국제마라톤',
+        '대구마라톤',
+        '경주마라톤',
+        '군산 새만금 국제 마라톤',
+    ];
+
     /** @var list<array{check:string,pass:bool,detail:string}> */
     private array $results = [];
 
@@ -62,7 +70,7 @@ class VerifyRemodel extends Command
         $this->comment('[1] 데이터 모델');
 
         $racesCount = (int) DB::table('review.races')->count();
-        $this->record('races 베이스 존재', $racesCount >= 303, "count={$racesCount}");
+        $this->record('races 베이스 존재', $racesCount >= 4, "count={$racesCount}");
 
         $raceIdCol = DB::selectOne("
             SELECT COUNT(*) AS cnt FROM information_schema.columns
@@ -103,17 +111,19 @@ class VerifyRemodel extends Command
     {
         $this->comment('[2] Pilot seed (TASK-16)');
 
-        $pilotIds = [2403, 2430, 2701, 2558];
-        foreach ($pilotIds as $raceId) {
-            $ed = RaceEdition::where('race_id', $raceId)->where('year', 2025)->first();
+        foreach ($this->pilotNames as $name) {
+            $race = DB::table('review.races')->where('name', $name)->first();
+            $ed = $race
+                ? RaceEdition::where('race_id', $race->id)->where('year', 2025)->first()
+                : null;
             $hasGpx = $ed && DB::table('review.race_courses')
                 ->where('race_edition_id', $ed->id)
                 ->whereNotNull('gpx_url')
                 ->exists();
             $this->record(
-                "pilot race_id={$raceId}",
+                "pilot {$name}",
                 $ed && $ed->status === 'ended' && $ed->is_review_open && $hasGpx,
-                $ed ? "edition #{$ed->id}" : 'missing'
+                $ed ? "race #{$race->id}, edition #{$ed->id}" : 'missing'
             );
         }
 
@@ -220,7 +230,10 @@ class VerifyRemodel extends Command
             $this->record('ended+open edition', false, 'none');
         }
 
-        $editionWithGpx = RaceEdition::whereIn('race_id', [2403, 2430, 2701, 2558])
+        $editionWithGpx = RaceEdition::query()
+            ->whereIn('race_id', function ($q) {
+                $q->select('id')->from('review.races')->whereIn('name', $this->pilotNames);
+            })
             ->where('year', 2025)
             ->first();
 
@@ -239,7 +252,7 @@ class VerifyRemodel extends Command
             GROUP BY r.id HAVING COUNT(re.id) = 0
             LIMIT 1
         ");
-        $this->record('edition 없는 race 존재 (299 빈 races)', $emptyEditionRace !== null, $emptyEditionRace ? "race_id={$emptyEditionRace->id}" : 'none');
+        $this->record('edition 없는 race 존재 (WA 카탈로그)', $emptyEditionRace !== null, $emptyEditionRace ? "race_id={$emptyEditionRace->id}" : 'none');
     }
 
     private function verifyCostGuard(): void

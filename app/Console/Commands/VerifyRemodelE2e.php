@@ -41,19 +41,30 @@ class VerifyRemodelE2e extends Command
 
         $otherUser = User::query()->where('id', '!=', $user->id)->orderBy('id')->first();
 
-        $pilots = [
-            2403 => 305,
-            2430 => 306,
-            2701 => 307,
-            2558 => 308,
+        $pilotNames = [
+            '서울국제마라톤',
+            '대구마라톤',
+            '경주마라톤',
+            '군산 새만금 국제 마라톤',
         ];
 
-        foreach ($pilots as $raceId => $editionId) {
-            $this->checkShowPage($raceId, $editionId);
+        foreach ($pilotNames as $name) {
+            $race = Race::where('name', $name)->first();
+            $edition = $race
+                ? RaceEdition::where('race_id', $race->id)->where('year', 2025)->first()
+                : null;
+            if ($race && $edition) {
+                $this->checkShowPage($race->id, $edition->id, $name);
+            } else {
+                $this->record("show {$name}", false, 'race/edition 없음');
+            }
         }
 
         $upcoming = RaceEdition::where('status', 'upcoming')->first();
-        $ended    = RaceEdition::where('race_id', 2403)->where('year', 2025)->first();
+        $seoulRace = Race::where('name', '서울국제마라톤')->first();
+        $ended = $seoulRace
+            ? RaceEdition::where('race_id', $seoulRace->id)->where('year', 2025)->first()
+            : null;
 
         if ($upcoming) {
             $this->checkUpcomingFeedback($user, $upcoming);
@@ -124,14 +135,14 @@ class VerifyRemodelE2e extends Command
         return $response->getStatusCode();
     }
 
-    private function checkShowPage(int $raceId, int $expectedEditionId): void
+    private function checkShowPage(int $raceId, int $expectedEditionId, string $label): void
     {
         $status = $this->httpGet(route('races.show', $raceId));
         $edition = RaceEdition::find($expectedEditionId);
         $this->record(
-            "show race_id={$raceId}",
+            "show {$label}",
             $status === 200 && $edition !== null,
-            "HTTP {$status}, edition #{$expectedEditionId}"
+            "HTTP {$status}, race #{$raceId}, edition #{$expectedEditionId}"
         );
     }
 
