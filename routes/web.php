@@ -62,6 +62,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'admin']
 
     Route::post('pilot-editions/preview', [PilotEditionController::class, 'preview'])->name('pilot-editions.preview');
     Route::post('pilot-editions/provision', [PilotEditionController::class, 'provision'])->name('pilot-editions.provision');
+    Route::post('pilot-editions/attach-gpx', [PilotEditionController::class, 'attachGpx'])->name('pilot-editions.attach-gpx');
 });
 
 require __DIR__.'/auth.php';

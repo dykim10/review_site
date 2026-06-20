@@ -110,10 +110,20 @@
     {{-- 국내 Pilot 4 — race_editions 연도별 생성 --}}
     <div class="adm-form-card" style="margin-bottom:1.25rem;">
         <div style="font-weight:700;font-size:0.95rem;margin-bottom:0.35rem;">국내 Pilot 4 — Edition 생성</div>
-        <p style="margin:0 0 0.85rem;color:#6B7280;font-size:0.8rem;line-height:1.5;max-width:640px;">
-            서울/대구/경주/군산 <code>race_editions</code>를 연도별로 생성합니다.
-            <strong>과거</strong>: <code>config/pilot_races.php</code> catalog / <strong>미래·미정</strong>: <code>race_date</code> null → Admin에서 수동 입력.
+        <p style="margin:0 0 0.85rem;color:#6B7280;font-size:0.8rem;line-height:1.5;max-width:720px;">
+            서울/대구/경주/군산 <code>race_editions</code>를 <strong>선택한 연도마다</strong> 생성합니다 (4대회 × N년).
+            날짜 우선순위: catalog → marathongo (<code>2026 서울마라톤</code> 표기, slug, 일정 검색) → 미정.
+            미정은 <a href="{{ route('admin.race-editions.index') }}" class="adm-link">edition 관리</a>에서 수동 입력.
         </p>
+
+        @if(!empty($pilotCatalog))
+            <div style="font-size:0.75rem;color:#6B7280;margin-bottom:0.85rem;padding:0.5rem 0.65rem;background:#F9FAFB;border-radius:6px;line-height:1.55;">
+                <strong style="color:#374151;">catalog 등록 날짜</strong> (우선 적용):
+                @foreach($pilotCatalog as $pc)
+                    <div>{{ $pc['name'] }} — {{ $pc['catalog_years'] !== [] ? implode(', ', $pc['catalog_years']) : '없음' }}</div>
+                @endforeach
+            </div>
+        @endif
 
         @if(!empty($pilotStatus))
             <div style="font-size:0.78rem;color:#4B5563;margin-bottom:0.85rem;line-height:1.6;">
@@ -144,7 +154,7 @@
         <form method="POST" action="{{ route('admin.pilot-editions.preview') }}" id="pilot-edition-form" style="display:flex;flex-wrap:wrap;gap:0.75rem;align-items:flex-end;">
             @csrf
             <div class="adm-field" style="margin:0;">
-                <span class="adm-label">생성할 연도</span>
+                <span class="adm-label">생성할 연도 (복수 선택)</span>
                 <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-top:0.35rem;max-width:420px;">
                     @foreach($pilotYearOptions as $y)
                         <label style="font-size:0.78rem;color:#374151;display:flex;align-items:center;gap:0.25rem;">
@@ -155,14 +165,10 @@
                     @endforeach
                 </div>
             </div>
-            <div class="adm-field" style="margin:0;min-width:100px;">
-                <label class="adm-label" for="pilot-gpx-year">GPX 연도</label>
-                <select id="pilot-gpx-year" name="gpx_year" class="adm-input">
-                    @foreach($pilotYearOptions as $y)
-                        <option value="{{ $y }}" @selected($y === (int) date('Y') - 1)>{{ $y }}</option>
-                    @endforeach
-                </select>
-            </div>
+            <label style="display:flex;align-items:center;gap:0.35rem;font-size:0.8rem;color:#4B5563;padding-bottom:0.55rem;">
+                <input type="checkbox" name="fetch_dates" value="1" checked>
+                catalog 없는 연도 marathongo 날짜 조회
+            </label>
             <button type="submit" class="adm-btn adm-btn-ghost">미리보기</button>
             <button type="submit" formaction="{{ route('admin.pilot-editions.provision') }}" class="adm-btn adm-btn-primary"
                     onclick="return confirm('선택 연도의 pilot edition 4개×N년을 생성/갱신합니다. 계속할까요?')">
@@ -184,7 +190,12 @@
                             <tr>
                                 <td>{{ $row['name'] }}</td>
                                 <td>{{ $row['year'] }}</td>
-                                <td>{{ $row['race_date'] ?? '미정' }}</td>
+                                <td @if(empty($row['race_date'])) style="color:#B45309;font-weight:600;" @endif>
+                                    {{ $row['race_date'] ?? '미정' }}
+                                    @if(empty($row['race_date']) && ($row['date_source'] ?? '') === 'null')
+                                        <span style="font-weight:400;color:#9CA3AF;"> (catalog·marathongo 없음)</span>
+                                    @endif
+                                </td>
                                 <td>{{ $row['date_source'] }}</td>
                                 <td>{{ $row['status'] }}</td>
                                 <td>{{ ($row['exists'] ?? false) ? '있음' : '신규' }}</td>
@@ -220,6 +231,52 @@
                 <p style="margin:0.5rem 0 0;font-size:0.75rem;color:#6B7280;">
                     미정 날짜는 <a href="{{ route('admin.race-editions.index') }}" class="adm-link">edition 관리</a>에서 수동 입력.
                 </p>
+            </div>
+        @endif
+    </div>
+
+    {{-- GPX 스텁 — edition 생성과 별도 --}}
+    <div class="adm-form-card" style="margin-bottom:1.25rem;">
+        <div style="font-weight:700;font-size:0.95rem;margin-bottom:0.35rem;">GPX 코스 스텁 (선택)</div>
+        <p style="margin:0 0 0.85rem;color:#6B7280;font-size:0.8rem;line-height:1.5;max-width:720px;">
+            Edition 생성과 <strong>별도</strong>입니다. <strong>한 연도</strong>를 고르면, 해당 연도의
+            <strong>종료(ended)</strong> pilot edition 4개에 FULL 코스 GPX URL 스텁을 등록합니다.
+            (날짜가 catalog에 있어 ended인 연도만 — 예: 2025)
+        </p>
+        <form method="POST" action="{{ route('admin.pilot-editions.attach-gpx') }}" style="display:flex;flex-wrap:wrap;gap:0.75rem;align-items:flex-end;">
+            @csrf
+            <div class="adm-field" style="margin:0;min-width:120px;">
+                <label class="adm-label" for="pilot-gpx-year">GPX 등록 연도</label>
+                <select id="pilot-gpx-year" name="gpx_year" class="adm-input" required>
+                    @foreach($pilotYearOptions as $y)
+                        <option value="{{ $y }}" @selected($y === (int) date('Y') - 1)>{{ $y }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <button type="submit" class="adm-btn adm-btn-ghost"
+                    onclick="return confirm('선택 연도의 종료된 pilot edition에 GPX 스텁을 등록합니다.')">
+                GPX 스텁 등록
+            </button>
+        </form>
+
+        @if(session('pilot_gpx'))
+            <div style="margin-top:1rem;overflow-x:auto;">
+                <table class="adm-table" style="font-size:0.78rem;">
+                    <thead>
+                        <tr><th>대회</th><th>연도</th><th>edition</th><th>결과</th><th>사유</th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach(session('pilot_gpx') as $row)
+                            <tr>
+                                <td>{{ $row['name'] }}</td>
+                                <td>{{ $row['year'] }}</td>
+                                <td>{{ isset($row['edition_id']) ? '#'.$row['edition_id'] : '—' }}</td>
+                                <td>{{ $row['action'] }}</td>
+                                <td>{{ $row['reason'] ?? '—' }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
             </div>
         @endif
     </div>

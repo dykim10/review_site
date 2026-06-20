@@ -14,7 +14,10 @@ class PilotEditionController extends Controller
     {
         $data = $this->validatedYears($request);
 
-        $rows = $this->pilotEditions->preview($data['years']);
+        $rows = $this->pilotEditions->preview(
+            $data['years'],
+            $request->boolean('fetch_dates', true),
+        );
 
         return back()
             ->with('pilot_preview', $rows)
@@ -31,7 +34,7 @@ class PilotEditionController extends Controller
 
         $result = $this->pilotEditions->provision(
             $data['years'],
-            $data['gpx_year'] ?? null,
+            $request->boolean('fetch_dates', true),
         );
 
         $msg = sprintf(
@@ -46,21 +49,33 @@ class PilotEditionController extends Controller
             ->with('success', $msg);
     }
 
-    /** @return array{years: list<int>, gpx_year?: int} */
+    public function attachGpx(Request $request)
+    {
+        $validated = $request->validate([
+            'gpx_year' => ['required', 'integer', 'min:2018', 'max:2035'],
+        ]);
+        $year = (int) $validated['gpx_year'];
+
+        $rows = $this->pilotEditions->attachGpxStub($year);
+        $attached = count(array_filter($rows, fn ($r) => ($r['action'] ?? '') === 'attached'));
+
+        return back()
+            ->with('pilot_gpx', $rows)
+            ->with('success', sprintf('GPX 스텁 — %d건 등록 (%d년)', $attached, $year));
+    }
+
+    /** @return array{years: list<int>} */
     private function validatedYears(Request $request): array
     {
         $validated = $request->validate([
             'years'       => ['required', 'array', 'min:1'],
             'years.*'     => ['integer', 'min:2018', 'max:2035'],
-            'gpx_year'    => ['nullable', 'integer', 'min:2018', 'max:2035'],
+            'fetch_dates' => ['sometimes', 'boolean'],
         ]);
 
         $years = array_values(array_unique(array_map('intval', $validated['years'])));
         sort($years);
 
-        return [
-            'years'    => $years,
-            'gpx_year' => isset($validated['gpx_year']) ? (int) $validated['gpx_year'] : null,
-        ];
+        return ['years' => $years];
     }
 }

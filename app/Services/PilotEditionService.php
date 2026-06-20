@@ -5,9 +5,18 @@ namespace App\Services;
 use App\Models\Race;
 use App\Models\RaceEdition;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class PilotEditionService
 {
+    private string $coreApiUrl;
+
+    public function __construct()
+    {
+        $this->coreApiUrl = rtrim(config('services.core_api.url', 'http://localhost:8100'), '/');
+    }
+
     /** @return array<string, array<string, mixed>> */
     public function pilots(): array
     {
@@ -50,10 +59,10 @@ class PilotEditionService
      * @param  list<int>  $years
      * @return list<array<string, mixed>>
      */
-    public function preview(array $years): array
+    public function preview(array $years, bool $fetchExternal = true): array
     {
         sort($years);
-        $dateMap = $this->resolveDateMap($years);
+        $dateMap = $this->resolveDateMap($years, $fetchExternal);
         $rows = [];
 
         foreach ($this->pilots() as $key => $pilot) {
@@ -90,11 +99,10 @@ class PilotEditionService
      * @param  list<int>  $years
      * @return array{created:int, updated:int, rows:list<array<string,mixed>>}
      */
-    public function provision(array $years, ?int $gpxYear = null): array
+    public function provision(array $years, bool $fetchExternal = true): array
     {
         sort($years);
-        $gpxYear ??= (int) date('Y') - 1;
-        $dateMap = $this->resolveDateMap($years);
+        $dateMap = $this->resolveDateMap($years, $fetchExternal);
         $created = $updated = 0;
         $resultRows = [];
 
@@ -131,17 +139,6 @@ class PilotEditionService
                         'source'           => 'pilot_provision',
                     ]
                 );
-
-                if ($year === $gpxYear && $status === 'ended') {
-                    \App\Models\RaceCourse::updateOrCreate(
-                        ['race_edition_id' => $edition->id, 'course_type' => 'FULL'],
-                        [
-                            'gpx_url'      => "race-courses/{$edition->id}/FULL.gpx",
-                            'source'       => 'official',
-                            'is_certified' => true,
-                        ]
-                    );
-                }
 
                 $wasExisting ? $updated++ : $created++;
 
@@ -192,22 +189,158 @@ class PilotEditionService
     }
 
     /**
+     * 종료된 pilot edition에 GPX 코스 스텁 등록 (edition 생성과 별도).
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function attachGpxStub(int $year): array
+    {
+        $rows = [];
+
+        foreach ($this->pilots() as $key => $pilot) {
+            $race = Race::where('name', $pilot['name'])->first();
+            if (! $race) {
+                $rows[] = [
+                    'name'   => $pilot['name'],
+                    'year'   => $year,
+                    'action' => 'skipped',
+                    'reason' => 'race 없음',
+                ];
+                continue;
+            }
+
+            $edition = RaceEdition::where('race_id', $race->id)->where('year', $year)->first();
+            if (! $edition) {
+                $rows[] = [
+                    'name'   => $pilot['name'],
+                    'year'   => $year,
+                    'action' => 'skipped',
+                    'reason' => 'edition 없음',
+                ];
+                continue;
+            }
+
+            [$status] = $this->deriveStatus($edition->race_date, $year);
+            if ($status !== 'ended') {
+                $rows[] = [
+                    'name'        => $pilot['name'],
+                    'year'        => $year,
+                    'edition_id'  => $edition->id,
+                    'action'      => 'skipped',
+                    'reason'      => '종료(ended) 아님 — status: '.$status,
+                ];
+                continue;
+            }
+
+            \App\Models\RaceCourse::updateOrCreate(
+                ['race_edition_id' => $edition->id, 'course_type' => 'FULL'],
+                [
+                    'gpx_url'      => "race-courses/{$edition->id}/FULL.gpx",
+                    'source'       => 'official',
+                    'is_certified' => true,
+                ]
+            );
+
+            $rows[] = [
+                'name'       => $pilot['name'],
+                'year'       => $year,
+                'edition_id' => $edition->id,
+                'action'     => 'attached',
+                'reason'     => null,
+            ];
+        }
+
+        return $rows;
+    }
+
+    /**
+     * Admin — catalog에 등록된 날짜 연도 (자동 조회 가능 범위).
+     *
+     * @return list<array{name: string, catalog_years: list<int>}>
+     */
+    public function catalogCoverage(): array
+    {
+        $rows = [];
+        foreach ($this->pilots() as $pilot) {
+            $years = array_map('intval', array_keys($pilot['dates'] ?? []));
+            sort($years);
+            $rows[] = [
+                'name'          => $pilot['name'],
+                'catalog_years' => $years,
+            ];
+        }
+
+        return $rows;
+    }
+
+    /**
      * @param  list<int>  $years
      * @return array<string, array<int, array{race_date: ?string, source: string}>>
      */
-    private function resolveDateMap(array $years): array
+    private function resolveDateMap(array $years, bool $fetchExternal): array
     {
         $map = [];
         foreach ($this->pilots() as $key => $pilot) {
             $map[$key] = [];
             foreach ($years as $year) {
                 $dates = $pilot['dates'] ?? [];
-                if (isset($dates[$year])) {
-                    $map[$key][$year] = ['race_date' => $dates[$year], 'source' => 'catalog'];
+                $date = $dates[$year] ?? $dates[(string) $year] ?? null;
+                if ($date !== null) {
+                    $map[$key][$year] = ['race_date' => $date, 'source' => 'catalog'];
                 } else {
                     $map[$key][$year] = ['race_date' => null, 'source' => 'null'];
                 }
             }
+        }
+
+        if (! $fetchExternal) {
+            return $map;
+        }
+
+        $lookupYears = array_values(array_filter($years, function (int $y) use ($map) {
+            if ($y > (int) date('Y') + 1) {
+                return false;
+            }
+            foreach ($map as $byYear) {
+                if (($byYear[$y]['source'] ?? '') === 'null') {
+                    return true;
+                }
+            }
+
+            return false;
+        }));
+
+        if ($lookupYears === []) {
+            return $map;
+        }
+
+        try {
+            $response = Http::timeout(180)
+                ->acceptJson()
+                ->get("{$this->coreApiUrl}/api/races/pilot-edition-dates", [
+                    'years'          => implode(',', $lookupYears),
+                    'fetch_external' => 'true',
+                ]);
+
+            if ($response->successful()) {
+                foreach ($response->json() as $row) {
+                    $k = $row['key'] ?? null;
+                    $y = (int) ($row['year'] ?? 0);
+                    if ($k && isset($map[$k][$y]) && ($map[$k][$y]['source'] === 'null')) {
+                        $map[$k][$y] = [
+                            'race_date' => $row['race_date'] ?? null,
+                            'source'    => $row['source'] ?? 'null',
+                        ];
+                    }
+                }
+            } else {
+                Log::warning('Pilot batch date lookup HTTP error', [
+                    'status' => $response->status(),
+                    'body'   => $response->body(),
+                ]);
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Pilot batch date lookup failed', ['error' => $e->getMessage()]);
         }
 
         return $map;
@@ -216,9 +349,9 @@ class PilotEditionService
     /**
      * @return array{race_date: ?string, source: string}
      */
-    public function resolveRaceDate(string $key, int $year): array
+    public function resolveRaceDate(string $key, int $year, bool $fetchExternal = true): array
     {
-        return $this->resolveDateMap([$year])[$key][$year]
+        return $this->resolveDateMap([$year], $fetchExternal)[$key][$year]
             ?? ['race_date' => null, 'source' => 'null'];
     }
 

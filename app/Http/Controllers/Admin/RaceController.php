@@ -21,8 +21,9 @@ class RaceController extends Controller
             ->mapWithKeys(fn (int $y) => [$y => Cache::get(WaLabelSyncService::cacheKey($y))])
             ->filter();
         $pilotStatus = $pilotEditions->adminStatus();
+        $pilotCatalog = $pilotEditions->catalogCoverage();
 
-        return view('admin.races.index', compact('races', 'waSyncStatuses', 'pilotStatus'));
+        return view('admin.races.index', compact('races', 'waSyncStatuses', 'pilotStatus', 'pilotCatalog'));
     }
 
     public function create()

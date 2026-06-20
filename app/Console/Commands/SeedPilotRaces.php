@@ -20,6 +20,7 @@ class SeedPilotRaces extends Command
                             {--from=2020 : edition 시작 연도}
                             {--to= : edition 종료 연도 (기본: 올해)}
                             {--gpx-year=2025 : GPX 스텁 연도}
+                            {--fetch-dates : catalog 없는 연도 marathongo 날짜 조회}
                             {--smoke : 스모크용 샘플 review/feedback}
                             {--skip-weather : ASOS 생략}
                             {--force : smoke만 보완}
@@ -32,6 +33,7 @@ class SeedPilotRaces extends Command
         $fromYear = (int) $this->option('from');
         $toYear   = (int) ($this->option('to') ?: date('Y'));
         $gpxYear  = (int) $this->option('gpx-year');
+        $fetch    = (bool) $this->option('fetch-dates');
 
         if ($fromYear > $toYear) {
             $this->error('--from 은 --to 이하여야 합니다.');
@@ -42,7 +44,7 @@ class SeedPilotRaces extends Command
         $years = range($fromYear, $toYear);
 
         if ($this->option('repair')) {
-            return $this->repair($pilotEditions, $years);
+            return $this->repair($pilotEditions, $years, $fetch);
         }
 
         if ($this->option('force')) {
@@ -54,9 +56,14 @@ class SeedPilotRaces extends Command
             return 0;
         }
 
-        $this->info('Pilot provision — '.implode(', ', $years));
+        $this->info('Pilot provision — '.implode(', ', $years).($fetch ? ' (+ marathongo)' : ''));
 
-        $result = $pilotEditions->provision($years, $gpxYear);
+        $result = $pilotEditions->provision($years, $fetch);
+        $gpxRows = $pilotEditions->attachGpxStub($gpxYear);
+        $gpxAttached = count(array_filter($gpxRows, fn ($r) => ($r['action'] ?? '') === 'attached'));
+        if ($gpxAttached > 0) {
+            $this->line("  [gpx] {$gpxYear}년 — {$gpxAttached}건");
+        }
 
         if (! $this->option('skip-weather')) {
             foreach ($result['resultRows'] as $row) {
@@ -93,11 +100,11 @@ class SeedPilotRaces extends Command
     }
 
     /** @param list<int> $years */
-    private function repair(PilotEditionService $pilotEditions, array $years): int
+    private function repair(PilotEditionService $pilotEditions, array $years, bool $fetch): int
     {
         $this->info('Pilot repair — provision upsert');
 
-        $result = $pilotEditions->provision($years, null);
+        $result = $pilotEditions->provision($years, $fetch);
         $this->info("repair 완료 — 갱신 {$result['updated']} / 신규 {$result['created']}");
 
         return 0;
