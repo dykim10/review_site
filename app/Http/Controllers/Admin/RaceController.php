@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreRaceRequest;
 use App\Models\Race;
+use App\Services\PilotEditionService;
 use App\Services\RaceService;
 use App\Services\WaLabelSyncService;
 use Illuminate\Support\Facades\Cache;
@@ -13,14 +14,15 @@ class RaceController extends Controller
 {
     public function __construct(private RaceService $raceService) {}
 
-    public function index()
+    public function index(PilotEditionService $pilotEditions)
     {
         $races = $this->raceService->getAdminList();
         $waSyncStatuses = collect([2026, 2025, 2024, 2023, 2022])
             ->mapWithKeys(fn (int $y) => [$y => Cache::get(WaLabelSyncService::cacheKey($y))])
             ->filter();
+        $pilotStatus = $pilotEditions->adminStatus();
 
-        return view('admin.races.index', compact('races', 'waSyncStatuses'));
+        return view('admin.races.index', compact('races', 'waSyncStatuses', 'pilotStatus'));
     }
 
     public function create()

@@ -7,6 +7,7 @@ use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\Admin\RaceController as AdminRaceController;
 use App\Http\Controllers\Admin\RaceEditionController as AdminRaceEditionController;
 use App\Http\Controllers\Admin\RaceCourseController as AdminRaceCourseController;
+use App\Http\Controllers\Admin\PilotEditionController;
 use App\Http\Controllers\Admin\WaLabelSyncController;
 use App\Http\Controllers\RacePlanController;
 use Illuminate\Support\Facades\Route;
@@ -57,6 +58,10 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'admin']
 
     Route::post('wa-label/preview', [WaLabelSyncController::class, 'preview'])->name('wa-label.preview');
     Route::post('wa-label/sync', [WaLabelSyncController::class, 'sync'])->name('wa-label.sync');
+    Route::post('wa-label/cancel', [WaLabelSyncController::class, 'cancel'])->name('wa-label.cancel');
+
+    Route::post('pilot-editions/preview', [PilotEditionController::class, 'preview'])->name('pilot-editions.preview');
+    Route::post('pilot-editions/provision', [PilotEditionController::class, 'provision'])->name('pilot-editions.provision');
 });
 
 require __DIR__.'/auth.php';

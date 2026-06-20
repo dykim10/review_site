@@ -5,6 +5,7 @@ namespace App\Services;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class WaLabelSyncService
 {
@@ -20,6 +21,11 @@ class WaLabelSyncService
         return "wa_label_sync:{$year}";
     }
 
+    public function newSessionId(): string
+    {
+        return (string) Str::uuid();
+    }
+
     /** @return array<string, mixed>|null */
     public function getSyncStatus(int $year): ?array
     {
@@ -28,12 +34,21 @@ class WaLabelSyncService
         return is_array($status) ? $status : null;
     }
 
-    public function markRunning(int $year): void
+    public function markRunning(int $year, string $sessionId): void
     {
         Cache::put(self::cacheKey($year), [
-            'status'     => 'running',
-            'started_at' => now()->toIso8601String(),
+            'status'      => 'running',
+            'session_id'  => $sessionId,
+            'started_at'  => now()->toIso8601String(),
         ], 7200);
+    }
+
+    public function markCancelling(int $year): void
+    {
+        $prev = $this->getSyncStatus($year) ?? [];
+        Cache::put(self::cacheKey($year), array_merge($prev, [
+            'status' => 'cancelling',
+        ]), 7200);
     }
 
     /** @param array<string, mixed> $result */
@@ -48,6 +63,16 @@ class WaLabelSyncService
         ], 7200);
     }
 
+    /** @param array<string, mixed> $rollback */
+    public function markCancelled(int $year, array $rollback): void
+    {
+        Cache::put(self::cacheKey($year), [
+            'status'      => 'cancelled',
+            'finished_at' => now()->toIso8601String(),
+            'rollback'    => $rollback,
+        ], 7200);
+    }
+
     public function markFailed(int $year, string $message): void
     {
         Cache::put(self::cacheKey($year), [
@@ -58,17 +83,41 @@ class WaLabelSyncService
     }
 
     /**
-     * World Athletics Label Road Races 시즌 sync (core-api POST /api/races/sync).
-     *
-     * @return array{year:int,total:int,inserted:int,updated:int,decertified:int,skipped:int}
+     * @return array<string, mixed>
      */
-    public function syncSeason(int $year, bool $translate = false, bool $organiser = false): array
+    public function requestCancel(string $sessionId): array
     {
-        $query = http_build_query([
-            'year'      => $year,
-            'translate' => $translate ? 'true' : 'false',
-            'organiser' => $organiser ? 'true' : 'false',
-        ]);
+        $response = Http::timeout(30)
+            ->acceptJson()
+            ->post("{$this->coreApiUrl}/api/races/sync/cancel?".http_build_query([
+                'session_id' => $sessionId,
+            ]));
+
+        if ($response->failed()) {
+            $detail = $response->json('detail') ?? $response->body();
+            throw new \RuntimeException(
+                is_string($detail) ? $detail : 'WA sync cancel API 오류 (HTTP '.$response->status().')'
+            );
+        }
+
+        return $response->json();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function syncSeason(
+        int $year,
+        bool $translate = false,
+        bool $organiser = false,
+        ?string $sessionId = null,
+    ): array {
+        $query = http_build_query(array_filter([
+            'year'       => $year,
+            'translate'  => $translate ? 'true' : 'false',
+            'organiser'  => $organiser ? 'true' : 'false',
+            'session_id' => $sessionId,
+        ], fn ($v) => $v !== null && $v !== ''));
 
         $response = Http::timeout(600)
             ->connectTimeout(15)
@@ -91,8 +140,6 @@ class WaLabelSyncService
     }
 
     /**
-     * 크롤 미리보기 — DB 변경 없음 (GET /api/races/crawl-wa-labels).
-     *
      * @return array<int, array<string, mixed>>
      */
     public function previewSeason(int $year, bool $organiser = false): array

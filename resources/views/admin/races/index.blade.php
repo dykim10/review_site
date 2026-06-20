@@ -22,8 +22,7 @@
             </div>
         </div>
 
-        <form method="POST" action="{{ route('admin.wa-label.sync') }}" style="margin-top:1.1rem;display:flex;flex-wrap:wrap;align-items:flex-end;gap:0.75rem;"
-              onsubmit="return confirm('선택 시즌 WA Label 목록을 DB에 동기화합니다. 1~3분 소요될 수 있습니다. 계속할까요?')">
+        <form method="POST" action="{{ route('admin.wa-label.sync') }}" id="wa-sync-form" style="margin-top:1.1rem;display:flex;flex-wrap:wrap;align-items:flex-end;gap:0.75rem;">
             @csrf
             <div class="adm-field" style="margin:0;min-width:120px;">
                 <label class="adm-label" for="wa-year">시즌 (season)</label>
@@ -34,29 +33,61 @@
                 </select>
             </div>
             <label style="display:flex;align-items:center;gap:0.35rem;font-size:0.8rem;color:#4B5563;padding-bottom:0.55rem;">
-                <input type="checkbox" name="translate" value="1"> 한국어 번역 (Haiku)
+                <input type="checkbox" name="translate" id="wa-translate" value="1"> 한국어 번역 (Haiku)
             </label>
             <label style="display:flex;align-items:center;gap:0.35rem;font-size:0.8rem;color:#4B5563;padding-bottom:0.55rem;">
-                <input type="checkbox" name="organiser" value="1"> 주최/공식 URL
+                <input type="checkbox" name="organiser" id="wa-organiser" value="1"> 주최/공식 URL
             </label>
             <button type="submit" class="adm-btn adm-btn-primary">동기화 실행 (백그라운드)</button>
         </form>
+        <script>
+            document.getElementById('wa-sync-form')?.addEventListener('submit', function (e) {
+                const year = document.getElementById('wa-year')?.value;
+                const tr = document.getElementById('wa-translate')?.checked;
+                const org = document.getElementById('wa-organiser')?.checked;
+                let msg = year + ' 시즌 WA Label 동기화를 시작합니다.';
+                if (tr && org) {
+                    msg += '\n\n⚠ 번역+주최 URL 모두 켜짐 → 15~30분 이상 소요될 수 있습니다.\n백필(최초)은 체크 없이 실행을 권장합니다.';
+                } else if (tr || org) {
+                    msg += '\n\n옵션 켜짐 → 5~15분 소요될 수 있습니다.';
+                } else {
+                    msg += '\n\n약 1~3분 소요 (백그라운드). 완료 후 페이지를 새로고침하세요.';
+                }
+                if (!confirm(msg)) e.preventDefault();
+            });
+        </script>
 
         @if($waSyncStatuses->isNotEmpty())
             <div style="margin-top:0.85rem;font-size:0.78rem;color:#4B5563;line-height:1.6;">
                 <strong>최근 동기화 상태</strong>
                 @foreach($waSyncStatuses as $y => $st)
                     @php $status = $st['status'] ?? 'unknown'; @endphp
-                    <div>
-                        {{ $y }}:
-                        @if($status === 'running')
-                            <span style="color:#B45309;">진행 중…</span>
-                        @elseif($status === 'done')
-                            @php $r = $st['result'] ?? []; @endphp
-                            <span style="color:#047857;">완료</span>
-                            — 수집 {{ $r['total'] ?? '?' }} / 신규 {{ $r['inserted'] ?? '?' }} / 갱신 {{ $r['updated'] ?? '?' }}
-                        @elseif($status === 'failed')
-                            <span style="color:#B91C1C;">실패</span> — {{ Str::limit($st['error'] ?? '', 80) }}
+                    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:0.5rem;margin-top:0.25rem;">
+                        <span>
+                            {{ $y }}:
+                            @if($status === 'running')
+                                <span style="color:#B45309;">진행 중…</span>
+                            @elseif($status === 'cancelling')
+                                <span style="color:#B45309;">중지·롤백 중…</span>
+                            @elseif($status === 'cancelled')
+                                @php $rb = $st['rollback'] ?? []; @endphp
+                                <span style="color:#6B7280;">중지됨 (롤백)</span>
+                                — 삭제 {{ $rb['deleted_inserts'] ?? 0 }} / 복원 {{ ($rb['restored_updates'] ?? 0) + ($rb['restored_decertified'] ?? 0) }}
+                            @elseif($status === 'done')
+                                @php $r = $st['result'] ?? []; @endphp
+                                <span style="color:#047857;">완료</span>
+                                — 수집 {{ $r['total'] ?? '?' }} / 신규 {{ $r['inserted'] ?? '?' }} / 갱신 {{ $r['updated'] ?? '?' }}
+                            @elseif($status === 'failed')
+                                <span style="color:#B91C1C;">실패</span> — {{ Str::limit($st['error'] ?? '', 80) }}
+                            @endif
+                        </span>
+                        @if(in_array($status, ['running', 'cancelling'], true))
+                            <form method="POST" action="{{ route('admin.wa-label.cancel') }}" style="display:inline;margin:0;"
+                                  onsubmit="return confirm('{{ $y }} 시즌 동기화를 중지하고, 이번 세션에서 변경한 DB 내용을 롤백합니다. 계속할까요?')">
+                                @csrf
+                                <input type="hidden" name="year" value="{{ $y }}">
+                                <button type="submit" class="adm-btn adm-btn-danger" style="padding:0.25rem 0.55rem;font-size:0.72rem;">중지·롤백</button>
+                            </form>
                         @endif
                     </div>
                 @endforeach
@@ -74,6 +105,123 @@
                 목록 건수만 미리보기 (DB 변경 없음)
             </button>
         </form>
+    </div>
+
+    {{-- 국내 Pilot 4 — race_editions 연도별 생성 --}}
+    <div class="adm-form-card" style="margin-bottom:1.25rem;">
+        <div style="font-weight:700;font-size:0.95rem;margin-bottom:0.35rem;">국내 Pilot 4 — Edition 생성</div>
+        <p style="margin:0 0 0.85rem;color:#6B7280;font-size:0.8rem;line-height:1.5;max-width:640px;">
+            서울/대구/경주/군산 <code>race_editions</code>를 연도별로 생성합니다.
+            <strong>과거</strong>: <code>config/pilot_races.php</code> catalog / <strong>미래·미정</strong>: <code>race_date</code> null → Admin에서 수동 입력.
+        </p>
+
+        @if(!empty($pilotStatus))
+            <div style="font-size:0.78rem;color:#4B5563;margin-bottom:0.85rem;line-height:1.6;">
+                @foreach($pilotStatus as $ps)
+                    <div>
+                        {{ $ps['name'] }}
+                        @if($ps['race_id'])
+                            <span class="adm-td-muted">(race #{{ $ps['race_id'] }})</span>
+                            — editions:
+                            @if(count($ps['edition_years']))
+                                {{ implode(', ', $ps['edition_years']) }}
+                            @else
+                                <span style="color:#B45309;">없음</span>
+                            @endif
+                        @else
+                            <span style="color:#9CA3AF;">race 미생성</span>
+                        @endif
+                    </div>
+                @endforeach
+            </div>
+        @endif
+
+        @php
+            $pilotYearOptions = range((int) date('Y') + 1, 2020);
+            $defaultPilotYears = [(int) date('Y'), (int) date('Y') - 1];
+        @endphp
+
+        <form method="POST" action="{{ route('admin.pilot-editions.preview') }}" id="pilot-edition-form" style="display:flex;flex-wrap:wrap;gap:0.75rem;align-items:flex-end;">
+            @csrf
+            <div class="adm-field" style="margin:0;">
+                <span class="adm-label">생성할 연도</span>
+                <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-top:0.35rem;max-width:420px;">
+                    @foreach($pilotYearOptions as $y)
+                        <label style="font-size:0.78rem;color:#374151;display:flex;align-items:center;gap:0.25rem;">
+                            <input type="checkbox" name="years[]" value="{{ $y }}"
+                                @checked(in_array($y, $defaultPilotYears, true))>
+                            {{ $y }}
+                        </label>
+                    @endforeach
+                </div>
+            </div>
+            <div class="adm-field" style="margin:0;min-width:100px;">
+                <label class="adm-label" for="pilot-gpx-year">GPX 연도</label>
+                <select id="pilot-gpx-year" name="gpx_year" class="adm-input">
+                    @foreach($pilotYearOptions as $y)
+                        <option value="{{ $y }}" @selected($y === (int) date('Y') - 1)>{{ $y }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <button type="submit" class="adm-btn adm-btn-ghost">미리보기</button>
+            <button type="submit" formaction="{{ route('admin.pilot-editions.provision') }}" class="adm-btn adm-btn-primary"
+                    onclick="return confirm('선택 연도의 pilot edition 4개×N년을 생성/갱신합니다. 계속할까요?')">
+                Edition 생성
+            </button>
+        </form>
+
+        @if(session('pilot_preview'))
+            <div style="margin-top:1rem;overflow-x:auto;">
+                <div style="font-size:0.8rem;font-weight:600;margin-bottom:0.4rem;">미리보기 (DB 변경 없음)</div>
+                <table class="adm-table" style="font-size:0.78rem;">
+                    <thead>
+                        <tr>
+                            <th>대회</th><th>연도</th><th>날짜</th><th>출처</th><th>status</th><th>DB</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach(session('pilot_preview') as $row)
+                            <tr>
+                                <td>{{ $row['name'] }}</td>
+                                <td>{{ $row['year'] }}</td>
+                                <td>{{ $row['race_date'] ?? '미정' }}</td>
+                                <td>{{ $row['date_source'] }}</td>
+                                <td>{{ $row['status'] }}</td>
+                                <td>{{ ($row['exists'] ?? false) ? '있음' : '신규' }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @endif
+
+        @if(session('pilot_provision'))
+            <div style="margin-top:1rem;overflow-x:auto;">
+                <div style="font-size:0.8rem;font-weight:600;margin-bottom:0.4rem;">생성 결과</div>
+                <table class="adm-table" style="font-size:0.78rem;">
+                    <thead>
+                        <tr>
+                            <th>대회</th><th>연도</th><th>edition</th><th>날짜</th><th>status</th><th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach(session('pilot_provision') as $row)
+                            <tr>
+                                <td>{{ $row['name'] }}</td>
+                                <td>{{ $row['year'] }}</td>
+                                <td>#{{ $row['edition_id'] }}</td>
+                                <td>{{ $row['race_date'] ?? '미정' }}</td>
+                                <td>{{ $row['status'] }}</td>
+                                <td>{{ $row['action'] }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+                <p style="margin:0.5rem 0 0;font-size:0.75rem;color:#6B7280;">
+                    미정 날짜는 <a href="{{ route('admin.race-editions.index') }}" class="adm-link">edition 관리</a>에서 수동 입력.
+                </p>
+            </div>
+        @endif
     </div>
 
     <div class="adm-card">

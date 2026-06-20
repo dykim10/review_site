@@ -25,17 +25,30 @@ class WaLabelSyncController extends Controller
         $organiser = $request->boolean('organiser');
 
         $status = $this->waLabelSync->getSyncStatus($year);
-        if (($status['status'] ?? null) === 'running') {
-            return back()->with('error', "{$year} 시즌 동기화가 이미 진행 중입니다. 1~3분 후 새로고침하세요.");
+        if (in_array($status['status'] ?? null, ['running', 'cancelling'], true)) {
+            return back()->with('error', "{$year} 시즌 동기화가 이미 진행 중입니다.");
         }
 
-        $this->waLabelSync->markRunning($year);
+        $sessionId = $this->waLabelSync->newSessionId();
+        $this->waLabelSync->markRunning($year, $sessionId);
 
-        Bus::dispatchAfterResponse(function () use ($year, $translate, $organiser): void {
+        Bus::dispatchAfterResponse(function () use ($year, $translate, $organiser, $sessionId): void {
             set_time_limit(0);
 
             try {
-                $result = app(WaLabelSyncService::class)->syncSeason($year, $translate, $organiser);
+                $result = app(WaLabelSyncService::class)->syncSeason(
+                    $year,
+                    $translate,
+                    $organiser,
+                    $sessionId,
+                );
+
+                if (($result['status'] ?? null) === 'cancelled') {
+                    app(WaLabelSyncService::class)->markCancelled($year, $result);
+
+                    return;
+                }
+
                 app(WaLabelSyncService::class)->markDone($year, $result);
             } catch (\Throwable $e) {
                 app(WaLabelSyncService::class)->markFailed($year, $e->getMessage());
@@ -48,7 +61,39 @@ class WaLabelSyncController extends Controller
 
         return back()->with(
             'success',
-            "{$year} 시즌 동기화를 시작했습니다. 1~3분 소요될 수 있습니다. 완료 후 이 페이지를 새로고침하세요."
+            "{$year} 시즌 동기화를 시작했습니다. 중지하려면 아래 「중지·롤백」 버튼을 사용하세요."
+        );
+    }
+
+    public function cancel(Request $request)
+    {
+        $data = $request->validate([
+            'year' => ['required', 'integer', 'min:2018', 'max:2035'],
+        ]);
+
+        $year   = (int) $data['year'];
+        $status = $this->waLabelSync->getSyncStatus($year);
+
+        if (! in_array($status['status'] ?? null, ['running', 'cancelling'], true)) {
+            return back()->with('error', "{$year} 시즌에 진행 중인 동기화가 없습니다.");
+        }
+
+        $sessionId = $status['session_id'] ?? null;
+        if (! $sessionId) {
+            return back()->with('error', 'session_id가 없어 중지할 수 없습니다.');
+        }
+
+        $this->waLabelSync->markCancelling($year);
+
+        try {
+            $this->waLabelSync->requestCancel($sessionId);
+        } catch (\Throwable $e) {
+            Log::warning('WA cancel request failed', ['year' => $year, 'error' => $e->getMessage()]);
+        }
+
+        return back()->with(
+            'success',
+            "{$year} 시즌 동기화 중지를 요청했습니다. 롤백 완료까지 잠시 후 새로고침하세요."
         );
     }
 
