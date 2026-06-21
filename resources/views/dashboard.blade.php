@@ -9,6 +9,7 @@
         margin-bottom: 2.5rem; padding-bottom: 2rem; border-bottom: 1px solid #E8EAEE;
         display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 1rem;
     }
+    .dash-welcome__text { flex: 1; min-width: 0; }
     .dash-eyebrow {
         font-family: 'Archivo', sans-serif; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.22em;
         text-transform: uppercase; color: #E80043; margin-bottom: 0.4rem;
@@ -51,6 +52,8 @@
 
     @media (max-width: 560px) {
         .dash-wrap { padding: 1.75rem 1rem 3rem; }
+        .dash-welcome { flex-direction: column; align-items: stretch; }
+        .dash-cta { align-self: flex-start; }
         .info-grid { grid-template-columns: 1fr; }
     }
 </style>
@@ -61,7 +64,7 @@
 
     {{-- Welcome --}}
     <div class="dash-welcome">
-        <div>
+        <div class="dash-welcome__text">
             <p class="dash-eyebrow">Dashboard</p>
             <h1 class="dash-title">안녕하세요, {{ auth()->user()->name }}</h1>
             <p class="dash-sub">오늘도 달려볼까요? 새로운 대회를 찾아보세요.</p>

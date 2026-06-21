@@ -75,7 +75,15 @@ class SummaryService
             );
 
             if ($response->successful()) {
-                $race->update(['ai_race_summary' => $response->json()]);
+                $data = $response->json();
+                if (! is_array($data)) {
+                    $data = [];
+                }
+                $data['_meta'] = array_merge($data['_meta'] ?? [], [
+                    'dirty'        => false,
+                    'generated_at' => now()->toIso8601String(),
+                ]);
+                $race->update(['ai_race_summary' => $data]);
             } else {
                 Log::warning('AI 대회 종합 요약 응답 오류', ['status' => $response->status()]);
             }

@@ -191,7 +191,19 @@ class ReviewService
             ->post(config('services.core_api.url') . '/api/parse-image');
 
         if (! $response->successful()) {
-            throw new \RuntimeException('워치 이미지 파싱에 실패했습니다.');
+            Log::error('워치 이미지 파싱 CORE API 실패', [
+                'status' => $response->status(),
+                'body'   => $response->body(),
+            ]);
+
+            $detail = $response->json('detail');
+            $reason = is_string($detail) ? $detail : null;
+
+            throw new \RuntimeException(
+                $reason
+                    ? "워치 이미지 파싱 실패: {$reason}"
+                    : '워치 이미지 파싱에 실패했습니다. core-api(8100) 실행 여부를 확인해주세요.'
+            );
         }
 
         $data = $response->json();

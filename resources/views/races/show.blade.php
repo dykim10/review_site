@@ -514,9 +514,15 @@
         </div>
         @endif
 
-        {{-- AI Summary --}}
-        @if($race->ai_race_summary)
-            @php $ai = $race->ai_race_summary; @endphp
+        {{-- AI Summary (본문 없이 _meta.dirty 만 있으면 빈 카드 방지) --}}
+        @php
+            $ai = is_array($race->ai_race_summary) ? $race->ai_race_summary : [];
+            $aiHasContent = ! empty($ai['summary'])
+                || ! empty($ai['positives'])
+                || ! empty($ai['negatives'])
+                || ! empty($ai['keywords']);
+        @endphp
+        @if($aiHasContent)
             <div class="ai-card">
                 <div class="ai-card-inner">
                     <div class="ai-header">
