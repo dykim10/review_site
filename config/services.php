@@ -39,4 +39,8 @@ return [
         'url' => env('CORE_API_URL', 'http://localhost:8100'),
     ],
 
+    'kakao' => [
+        'js_key' => env('KAKAO_MAP_JS_KEY', ''),
+    ],
+
 ];

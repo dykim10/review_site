@@ -79,11 +79,20 @@ class RaceController extends Controller
         $myReview        = null;
         $feedbacks       = collect();
         $hasOfficialGpx  = false;
+        $coursesForMap   = collect();
+        $hasCourseMap    = false;
 
         if ($latestEdition) {
             $hasOfficialGpx = RaceCourse::where('race_edition_id', $latestEdition->id)
                 ->whereNotNull('gpx_url')
                 ->exists();
+
+            $coursesForMap = RaceCourse::where('race_edition_id', $latestEdition->id)
+                ->whereNotNull('coordinates')
+                ->orderByRaw("CASE course_type WHEN 'FULL' THEN 1 WHEN 'HALF' THEN 2 WHEN '10K' THEN 3 ELSE 4 END")
+                ->get(['course_type', 'coordinates', 'markers']);
+
+            $hasCourseMap = $coursesForMap->isNotEmpty();
 
             if ($latestEdition->isUpcoming()) {
                 $feedbacks = EditionFeedback::where('race_edition_id', $latestEdition->id)
@@ -119,6 +128,7 @@ class RaceController extends Controller
             'race', 'reviews', 'avgRating', 'alreadyReviewed',
             'weather', 'editions', 'myReview', 'latestEdition',
             'youtubeItems', 'instagramItems', 'feedbacks', 'hasOfficialGpx',
+            'coursesForMap', 'hasCourseMap',
         ));
     }
 }

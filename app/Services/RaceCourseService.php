@@ -35,6 +35,8 @@ class RaceCourseService
             'gpx_url'         => $uploaded['gpx_url'],
             'elevation_data'  => $uploaded['elevation_data'],
             'segments'        => $uploaded['segments'],
+            'coordinates'     => $uploaded['coordinates'],
+            'markers'         => $uploaded['markers'],
             'source'          => $extra['source']      ?? 'manual',
             'is_certified'    => $extra['is_certified'] ?? false,
             'certified_at'    => $extra['certified_at'] ?? null,
@@ -57,7 +59,7 @@ class RaceCourseService
     }
 
     /**
-     * @return array{gpx_url: string, elevation_data: ?array, segments: ?array}
+     * @return array{gpx_url: string, elevation_data: ?array, segments: ?array, coordinates: ?array, markers: ?array}
      */
     private function uploadToS3(UploadedFile $file, int $editionId, string $courseType): array
     {
@@ -97,6 +99,8 @@ class RaceCourseService
             'gpx_url'        => $gpxUrl,
             'elevation_data' => $response->json('elevation_data'),
             'segments'       => $response->json('segments'),
+            'coordinates'    => $response->json('coordinates'),
+            'markers'        => $response->json('markers'),
         ];
     }
 

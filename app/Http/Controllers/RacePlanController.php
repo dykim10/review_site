@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Race;
+use App\Models\RaceCourse;
 use App\Models\RaceEdition;
 use App\Models\RacePlan;
 use App\Services\CoreApiClient;
@@ -95,6 +96,11 @@ class RacePlanController extends Controller
             return back()->with('error', $e->getMessage())->withInput();
         }
 
-        return view('race-plan.result', compact('race', 'edition', 'plan'));
+        $course = RaceCourse::where('race_edition_id', $edition->id)
+            ->where('course_type', strtoupper($validated['course_type']))
+            ->whereNotNull('coordinates')
+            ->first(['course_type', 'coordinates', 'markers']);
+
+        return view('race-plan.result', compact('race', 'edition', 'plan', 'course'));
     }
 }

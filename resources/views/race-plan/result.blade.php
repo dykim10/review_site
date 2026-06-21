@@ -53,6 +53,10 @@
     .attn-tip { font-size: 0.78rem; color: var(--mut); }
     .attn-tip::before { content: '💡 '; }
 
+    .course-map-attn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; align-items: start; }
+    .course-map-col .section-title,
+    .course-attn-col .section-title { margin-bottom: 0.85rem; padding-bottom: 0.65rem; border-bottom: 1px solid var(--bd); }
+
     /* ── NUTRITION ── */
     .nutrition-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
     .nutrition-item { }
@@ -79,6 +83,7 @@
     .btn-race { padding: 0.65rem 1.4rem; background: var(--acc); color: #fff; border: none; border-radius: 8px; font-size: 0.85rem; font-weight: 600; font-family: 'Pretendard', sans-serif; transition: background 0.15s; }
     .btn-race:hover { background: var(--acc-d); }
 
+    @media (max-width: 720px) { .course-map-attn-grid { grid-template-columns: 1fr; } }
     @media (max-width: 620px) { .nutrition-grid { grid-template-columns: 1fr; } .hr-grid { grid-template-columns: 1fr 1fr; } }
 </style>
 @endpush
@@ -163,22 +168,37 @@
     </div>
     @endif
 
-    {{-- 주의 구간 --}}
-    @if(!empty($plan['attention_segments']))
+    {{-- 코스 지도 + 주의 구간 --}}
+    @if($course ?? false || !empty($plan['attention_segments']))
     <div class="section">
-        <div class="card">
-            <div class="section-title">⚠ 주의 구간</div>
-            <div class="attn-list">
-                @foreach($plan['attention_segments'] as $attn)
-                    <div class="attn-item">
-                        <div class="attn-seg">{{ $attn['segment'] ?? '' }}</div>
-                        <div class="attn-reason">{{ $attn['reason'] ?? '' }}</div>
-                        @if(!empty($attn['tip']))
-                            <div class="attn-tip">{{ $attn['tip'] }}</div>
-                        @endif
-                    </div>
-                @endforeach
+        <div class="card {{ ($course ?? false) && !empty($plan['attention_segments']) ? 'course-map-attn-grid' : '' }}">
+            @if($course ?? false)
+            <div class="course-map-col">
+                <div class="section-title">코스 지도</div>
+                @include('race-courses.partials.course-map', [
+                    'mapId'       => 'race-plan-map',
+                    'coordinates' => $course->coordinates,
+                    'markers'     => $course->markers,
+                    'height'      => '320px',
+                ])
             </div>
+            @endif
+            @if(!empty($plan['attention_segments']))
+            <div class="course-attn-col">
+                <div class="section-title">⚠ 주의 구간</div>
+                <div class="attn-list">
+                    @foreach($plan['attention_segments'] as $attn)
+                        <div class="attn-item">
+                            <div class="attn-seg">{{ $attn['segment'] ?? '' }}</div>
+                            <div class="attn-reason">{{ $attn['reason'] ?? '' }}</div>
+                            @if(!empty($attn['tip']))
+                                <div class="attn-tip">{{ $attn['tip'] }}</div>
+                            @endif
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+            @endif
         </div>
     </div>
     @endif

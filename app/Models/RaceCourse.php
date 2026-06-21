@@ -10,7 +10,7 @@ class RaceCourse extends Model
 
     protected $fillable = [
         'race_edition_id', 'course_type', 'gpx_url',
-        'elevation_data', 'segments', 'source',
+        'elevation_data', 'segments', 'coordinates', 'markers', 'source',
         'is_certified', 'certified_at',
     ];
 
@@ -19,6 +19,8 @@ class RaceCourse extends Model
         return [
             'elevation_data' => 'array',
             'segments'       => 'array',
+            'coordinates'    => 'array',
+            'markers'        => 'array',
             'is_certified'   => 'boolean',
             'certified_at'   => 'date',
         ];

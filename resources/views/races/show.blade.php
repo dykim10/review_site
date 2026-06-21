@@ -163,6 +163,10 @@
     .edition-tab-count { font-size: 0.68rem; font-family: 'Archivo', sans-serif; color: var(--muted); }
     .edition-tab-active .edition-tab-count { color: var(--accent); opacity: 0.8; }
 
+    button.edition-tab { cursor: pointer; font-family: inherit; appearance: none; }
+
+    #course-map-section { scroll-margin-top: 5rem; }
+
     #reviews { scroll-margin-top: 5rem; }
 
     /* ── REVIEWS ─────────────────────────────────── */
@@ -618,6 +622,56 @@
                 @endforeach
             </div>
         </div>
+        @endif
+
+        {{-- Course map --}}
+        @if($hasCourseMap)
+        <div class="info-card" id="course-map-section">
+            <div class="card-heading">코스 지도</div>
+            @if($coursesForMap->count() > 1)
+                <nav class="edition-tabs" aria-label="코스 타입" style="margin-bottom:1rem;">
+                    @foreach($coursesForMap as $idx => $mapCourse)
+                        <button type="button"
+                                class="edition-tab course-type-tab {{ $idx === 0 ? 'edition-tab-active' : '' }}"
+                                data-course-type="{{ $mapCourse->course_type }}">
+                            {{ ['FULL' => '풀마라톤', 'HALF' => '하프', '10K' => '10K'][$mapCourse->course_type] ?? $mapCourse->course_type }}
+                        </button>
+                    @endforeach
+                </nav>
+            @endif
+            @php $firstMapCourse = $coursesForMap->first(); @endphp
+            @include('race-courses.partials.course-map', [
+                'mapId'       => 'race-course-map',
+                'coordinates' => $firstMapCourse->coordinates,
+                'markers'     => $firstMapCourse->markers,
+            ])
+        </div>
+        @if($coursesForMap->count() > 1)
+            @push('scripts')
+            <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                var courseMapData = @json(
+                    $coursesForMap->keyBy('course_type')->map(
+                        fn ($c) => ['coordinates' => $c->coordinates, 'markers' => $c->markers]
+                    )
+                );
+                document.querySelectorAll('.course-type-tab').forEach(function(btn) {
+                    btn.addEventListener('click', function() {
+                        var type = btn.dataset.courseType;
+                        document.querySelectorAll('.course-type-tab').forEach(function(b) {
+                            b.classList.remove('edition-tab-active');
+                        });
+                        btn.classList.add('edition-tab-active');
+                        var payload = courseMapData[type];
+                        if (payload && typeof pacRunInitCourseMap === 'function') {
+                            pacRunInitCourseMap('race-course-map', payload.coordinates, payload.markers);
+                        }
+                    });
+                });
+            });
+            </script>
+            @endpush
+        @endif
         @endif
 
         {{-- Reviews --}}
