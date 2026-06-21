@@ -1,5 +1,8 @@
 # REVIEW 프로젝트 정의서
 
+> **⚠️ 레거시 — 갱신하지 않음**  
+> **정본:** `../../.claude/definition/05-review.md` · **진행:** `../../developer_md/STATUS.md`
+
 > 원본 공통 정의서: ~/projects/project-definition.md
 > 이 파일은 REVIEW(Laravel) 프로젝트에 특화된 정의입니다.
 

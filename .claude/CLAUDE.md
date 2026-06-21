@@ -2,42 +2,29 @@
 
 @C:\Users\dykim\.claude\plugins\marketplaces\claude-plugins-official\plugins\frontend-design\skills\frontend-design\SKILL.md
 
-> 마라톤 / 러닝 대회 리뷰 플랫폼
-> 공통 정의서 참고: ./project-definition.md
+> 마라톤 / 러닝 대회 리뷰 플랫폼  
+> **스펙 정본:** `../../.claude/definition/05-review.md` · **진행:** `../../developer_md/STATUS.md`  
+> `./project-definition.md` · `../project-definition.md`는 **레거시** — 갱신하지 않는다.
+
+@../../developer_md/STATUS.md
+@../../.claude/definition/01-overview.md
+@../../.claude/definition/02-common-rules.md
+@../../.claude/definition/04-api-endpoints.md
+@../../.claude/definition/05-review.md
 
 ---
 
-## 문서 자동 갱신 규칙
+## 문서 자동 갱신 (doc-sync)
 
-아래 시점에 **반드시** `.claude/project-definition.md` 와 `../project-definition.md` 를 최신 상태로 업데이트한다.
+기능 완료·commit 직전·`/compact` 직전·"문서 갱신" 요청 시:
 
-**트리거 조건**
-1. 기능 구현 완료 후 git commit 직전
-2. 사용자가 `/compact` 를 실행하기 전 (또는 컨텍스트 압축 직전) — **반드시 compact 전에 먼저 갱신**
-3. 사용자가 "정의서 업데이트", "문서 갱신" 등을 요청할 때
+1. **`../../.claude/definition/05-review.md`** — REVIEW 스펙·완료/미완·다음 작업
+2. **`../../developer_md/STATUS.md`** — PLAN/TASK 진행만 (스키마 중복 금지)
+3. 공통 변경 시 `03-db-schema.md` · `04-api-endpoints.md` · `08-core.md` 등 해당 파일
 
-**업데이트 항목**
-- 개발 우선순위 체크리스트 (완료된 항목에 ✅ 또는 `[x]` 표시)
-- 새로 추가된 CORE API 엔드포인트
-- 새로 추가된 DB 컬럼 / 테이블
-- 변경된 아키텍처 또는 설계 결정
-- v2 예정 기능 중 완료된 항목 이동
-- 각 프로젝트의 **"다음 작업"** 섹션 최신화
-- 배포 URL, 브랜치, EC2 경로 등 인프라 정보 변경사항
+상세 절차: 워크스페이스 루트 `.claude/skills/doc-sync.md` 또는 `/doc-sync`
 
-**compact 직전 갱신 체크리스트**
-```
-[ ] ../project-definition.md 의 각 프로젝트 v1 진행 현황 [x] 체크 최신화
-[ ] "다음 작업" 섹션 업데이트
-[ ] 새로 구현된 아키텍처 패턴 / 설계 결정 기록
-[ ] CORE API 엔드포인트 현황 표 업데이트
-[ ] 배포/인프라 변경사항 반영
-```
-
-**업데이트하지 않는 항목**
-- 코드 레벨 세부 구현 (그건 코드 자체가 문서)
-- 일시적 버그 수정
-- 스타일/오타 수정
+**업데이트하지 않는 항목:** 코드 세부 구현, 일시적 버그/스타일 수정
 
 ---
 
@@ -83,33 +70,22 @@ https://github.com/dykim10/review_site.git
 
 ---
 
-## CORE API 호출 엔드포인트
+## CORE API (로컬)
 
 ```
-POST http://localhost:8000/api/summarize  → 리뷰 AI 요약
-GET  http://localhost:8000/api/weather   → 날씨 데이터
-GET  http://localhost:8000/api/race-info → 대회 정보 크롤링
+CORE_API_URL=http://localhost:8100  (review/.env)
 ```
+
+엔드포인트 전체는 import된 `04-api-endpoints.md` · `05-review.md` 참조.
 
 ---
 
-## DB 스키마
+## DB / 기능 / 우선순위
+
+스키마·기능·진행 현황은 import된 **`05-review.md`** · **`STATUS.md`** 가 정본이다. 아래는 로컬 작업용 요약만 유지한다.
 
 ```
-public 스키마 : users / crews / branches / groups  (공통)
-review 스키마 : races / reviews / race_weather
-```
-
----
-
-## 개발 우선순위 (v1 목표)
-
-```
-1. Laravel 기본 설치 및 Supabase 연결
-2. 회원 인증 (이메일 인증)
-3. 대회 정보 등록 / 조회
-4. 리뷰 작성 / 목록
-5. AI 요약 연동 (CORE API 호출)
+review 스키마: races · race_editions · reviews · race_courses · race_plans · ...
 ```
 
 ---
