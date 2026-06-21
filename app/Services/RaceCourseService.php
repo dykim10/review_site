@@ -50,6 +50,27 @@ class RaceCourseService
         return $course;
     }
 
+    /**
+     * 메타데이터 수정 및(또는) GPX 파일 교체.
+     * edition/course_type 은 변경하지 않는다 (S3 키·UNIQUE 제약).
+     */
+    public function update(RaceCourse $course, array $extra, ?UploadedFile $gpxFile = null): RaceCourse
+    {
+        if ($gpxFile) {
+            $edition = $course->raceEdition ?? RaceEdition::findOrFail($course->race_edition_id);
+
+            return $this->uploadAndSave($edition, $course->course_type, $gpxFile, $extra);
+        }
+
+        $course->update([
+            'source'       => $extra['source'] ?? $course->source,
+            'is_certified' => (bool) ($extra['is_certified'] ?? false),
+            'certified_at' => $extra['certified_at'] ?? null,
+        ]);
+
+        return $course->fresh();
+    }
+
     public function delete(RaceCourse $course): void
     {
         if ($course->gpx_url) {

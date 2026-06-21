@@ -64,6 +64,44 @@ class RaceCourseController extends Controller
             ->with('success', 'GPX 코스가 등록되었습니다.');
     }
 
+    public function edit(RaceCourse $raceCourse)
+    {
+        $raceCourse->load('raceEdition.race');
+
+        return view('admin.race-courses.edit', ['course' => $raceCourse]);
+    }
+
+    public function update(Request $request, RaceCourse $raceCourse)
+    {
+        $validated = $request->validate([
+            'gpx_file'     => 'nullable|file|mimes:gpx,xml|max:20480',
+            'source'       => 'nullable|in:wari-gari,goandrace,official,manual',
+            'is_certified' => 'nullable|boolean',
+            'certified_at' => 'nullable|date',
+        ]);
+
+        try {
+            $this->service->update(
+                $raceCourse,
+                [
+                    'source'       => $validated['source'] ?? 'manual',
+                    'is_certified' => (bool) ($validated['is_certified'] ?? false),
+                    'certified_at' => $validated['certified_at'] ?? null,
+                ],
+                $request->file('gpx_file')
+            );
+        } catch (\RuntimeException $e) {
+            return back()->withErrors(['gpx_file' => $e->getMessage()])->withInput();
+        }
+
+        $message = $request->hasFile('gpx_file')
+            ? 'GPX 코스가 수정되었습니다. (파일 교체 포함)'
+            : 'GPX 코스 정보가 수정되었습니다.';
+
+        return redirect()->route('admin.race-courses.index')
+            ->with('success', $message);
+    }
+
     public function destroy(RaceCourse $raceCourse)
     {
         $this->service->delete($raceCourse);

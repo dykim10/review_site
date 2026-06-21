@@ -55,7 +55,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'admin']
     Route::get('/', fn () => redirect()->route('admin.races.index'))->name('home');
     Route::resource('races', AdminRaceController::class);
     Route::resource('race-editions', AdminRaceEditionController::class);
-    Route::resource('race-courses', AdminRaceCourseController::class)->only(['index', 'create', 'store', 'destroy']);
+    Route::resource('race-courses', AdminRaceCourseController::class)->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
 
     Route::post('wa-label/preview', [WaLabelSyncController::class, 'preview'])->name('wa-label.preview');
     Route::post('wa-label/sync', [WaLabelSyncController::class, 'sync'])->name('wa-label.sync');

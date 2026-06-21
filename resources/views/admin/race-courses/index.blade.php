@@ -37,9 +37,10 @@
                         <td>{{ $course->is_certified ? '✓ 공인' : '-' }}</td>
                         <td class="adm-td-muted">{{ $course->created_at?->format('Y.m.d') }}</td>
                         <td style="text-align:right;">
+                            <a href="{{ route('admin.race-courses.edit', $course) }}" class="adm-link">수정</a>
                             <form method="POST" action="{{ route('admin.race-courses.destroy', $course) }}" style="display:inline" onsubmit="return confirm('삭제하시겠습니까?')">
                                 @csrf @method('DELETE')
-                                <button type="submit" class="adm-btn-danger">삭제</button>
+                                <button type="submit" class="adm-btn-danger" style="margin-left:0.6rem;">삭제</button>
                             </form>
                         </td>
                     </tr>
@@ -49,4 +50,6 @@
             </tbody>
         </table>
     </div>
+
+    <div style="margin-top:1.25rem;">{{ $courses->links() }}</div>
 @endsection
