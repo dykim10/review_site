@@ -29,11 +29,13 @@ class RaceCourseService
     ): RaceCourse {
         $uploaded = $this->uploadToS3($gpxFile, $edition->id, $courseType);
 
+        $elevationProfile = $this->fetchElevationProfile($uploaded['gpx_url']);
+
         $payload = array_merge([
             'race_edition_id' => $edition->id,
             'course_type'     => strtoupper($courseType),
             'gpx_url'         => $uploaded['gpx_url'],
-            'elevation_data'  => $uploaded['elevation_data'],
+            'elevation_data'  => $elevationProfile,
             'segments'        => $uploaded['segments'],
             'coordinates'     => $uploaded['coordinates'],
             'markers'         => $uploaded['markers'],
@@ -42,12 +44,49 @@ class RaceCourseService
             'certified_at'    => $extra['certified_at'] ?? null,
         ]);
 
+        if (!$elevationProfile) {
+            Log::warning('고저도 프로파일 생성 실패 — gpx_url은 저장됨', [
+                'race_edition_id' => $edition->id,
+                'course_type'     => $courseType,
+            ]);
+        }
+
         $course = RaceCourse::updateOrCreate(
             ['race_edition_id' => $edition->id, 'course_type' => strtoupper($courseType)],
             $payload
         );
 
         return $course;
+    }
+
+    public function elevationProfileGenerated(?RaceCourse $course): bool
+    {
+        if (! $course) {
+            return false;
+        }
+        $data = $course->elevation_data;
+
+        return is_array($data) && ! empty($data['points']);
+    }
+
+    /**
+     * 기존 GPX(gpx_url)로 CORE 고저도 프로파일 재생성 → elevation_data 갱신.
+     * (구 gpx_service 요약 형식 total_gain_m 만 있는 row 백필용)
+     */
+    public function regenerateElevationProfile(RaceCourse $course): RaceCourse
+    {
+        if (! $course->gpx_url) {
+            throw new \RuntimeException('GPX URL이 없습니다.');
+        }
+
+        $profile = $this->fetchElevationProfile($course->gpx_url);
+        if (! $profile) {
+            throw new \RuntimeException('CORE 고저도 프로파일 생성에 실패했습니다. core-api(8100) 및 S3 GPX를 확인하세요.');
+        }
+
+        $course->update(['elevation_data' => $profile]);
+
+        return $course->fresh();
     }
 
     /**
@@ -110,7 +149,7 @@ class RaceCourseService
         }
 
         if (!$response->json('elevation_data')) {
-            Log::warning('GPX 고도 파싱 실패 — gpx_url만 저장 (분석 시 "상세 데이터 없음"으로 표시됨)', [
+            Log::warning('GPX 파싱(구간/좌표) 일부 실패 — gpx_url만 저장될 수 있음', [
                 'race_edition_id' => $editionId,
                 'course_type'     => $courseType,
             ]);
@@ -123,6 +162,64 @@ class RaceCourseService
             'coordinates'    => $response->json('coordinates'),
             'markers'        => $response->json('markers'),
         ];
+    }
+
+    private function fetchElevationProfile(string $gpxUrl, float $intervalM = 100.0): ?array
+    {
+        $key = $this->gpxUrlToS3Key($gpxUrl);
+        if (!$key) {
+            return null;
+        }
+
+        try {
+            $response = Http::timeout(60)->post("{$this->coreApiUrl}/api/course/elevation", [
+                'gpx_s3_key' => $key,
+                'interval_m' => $intervalM,
+            ]);
+
+            if ($response->successful()) {
+                $data = $response->json();
+                if (is_array($data) && ! empty($data['points'])) {
+                    return $data;
+                }
+            }
+
+            Log::warning('CORE 고저도 프로파일 응답 오류', [
+                'status' => $response->status(),
+                'body'   => $response->body(),
+            ]);
+
+            $detail = $response->json('detail');
+            if (is_string($detail)) {
+                throw new \RuntimeException("CORE API 오류 ({$response->status()}): {$detail}");
+            }
+        } catch (\RuntimeException $e) {
+            throw $e;
+        } catch (\Throwable $e) {
+            Log::warning('CORE 고저도 프로파일 호출 실패', ['error' => $e->getMessage()]);
+
+            if (str_contains($e->getMessage(), 'Failed to connect') || str_contains($e->getMessage(), 'Connection refused')) {
+                throw new \RuntimeException(
+                    "core-api({$this->coreApiUrl})에 연결할 수 없습니다. core-api를 8100 포트에서 실행했는지 확인하세요."
+                );
+            }
+
+            throw new \RuntimeException('CORE 호출 실패: '.$e->getMessage());
+        }
+
+        return null;
+    }
+
+    private function gpxUrlToS3Key(string $url): ?string
+    {
+        $path = parse_url($url, PHP_URL_PATH);
+        if (! is_string($path) || $path === '') {
+            return null;
+        }
+
+        $key = ltrim($path, '/');
+
+        return str_starts_with($key, 'race-courses/') ? $key : null;
     }
 
     private function deleteFromS3(string $url): void

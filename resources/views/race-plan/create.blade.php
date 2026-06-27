@@ -45,6 +45,13 @@
     .btn-submit { display: flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%; padding: 0.85rem; background: var(--acc); color: #fff; border: none; border-radius: 10px; font-size: 0.95rem; font-weight: 700; cursor: pointer; font-family: 'Pretendard', sans-serif; transition: background 0.15s; margin-top: 1.25rem; }
     .btn-submit:hover { background: var(--acc-d); }
     .btn-submit:disabled { opacity: 0.5; cursor: wait; }
+    .upload-hint { font-size: 0.72rem; color: var(--mut); margin-top: 0.35rem; line-height: 1.5; }
+    .file-input { font-size: 0.82rem; color: var(--t2); width: 100%; }
+    .file-input::file-selector-button {
+        margin-right: 0.65rem; padding: 0.45rem 0.75rem; border-radius: 6px;
+        border: 1px solid var(--bd); background: var(--s2); font-size: 0.75rem;
+        font-weight: 600; cursor: pointer;
+    }
     .loading-overlay { display: none; position: fixed; inset: 0; background: rgba(10,10,10,0.78); backdrop-filter: blur(6px); z-index: 999; flex-direction: column; align-items: center; justify-content: center; gap: 1.25rem; }
     .loading-overlay.active { display: flex; }
     .spinner { width: 44px; height: 44px; border: 3px solid rgba(255,255,255,0.15); border-top-color: var(--acc); border-radius: 50%; animation: spin 0.8s linear infinite; }
@@ -82,7 +89,7 @@
         </div>
     @endif
 
-    <form method="POST" action="{{ route('race-plan.generate', $race) }}" id="plan-form">
+    <form method="POST" action="{{ route('race-plan.generate', $race) }}" id="plan-form" enctype="multipart/form-data">
         @csrf
 
         {{-- ① 대회 선택 --}}
@@ -181,6 +188,19 @@
                     </div>
                 </div>
             </div>
+            <div class="field">
+                <label class="fl">훈련 기록 스크린샷 <span class="hint">최대 5장 · JPEG/PNG/GIF/WebP</span></label>
+                <input type="file"
+                       name="training_images[]"
+                       class="file-input"
+                       accept="image/jpeg,image/png,image/gif,image/webp"
+                       multiple
+                       id="training-images">
+                <p class="upload-hint">
+                    워치·앱(Garmin, COROS 등) 훈련 화면 캡처를 올리면 AI가 거리·페이스·심박 등을 추출해 플랜에 반영합니다.
+                    <strong>1회성 처리</strong> — 파싱 후 서버에 저장되지 않고 삭제됩니다. 이미지는 영구적으로 보관되지 않습니다.
+                </p>
+            </div>
         </div>
 
         <button type="submit" class="btn-submit" id="submit-btn">
@@ -193,7 +213,13 @@
 
 @push('scripts')
 <script>
-document.getElementById('plan-form').addEventListener('submit', function () {
+document.getElementById('plan-form').addEventListener('submit', function (e) {
+    var input = document.getElementById('training-images');
+    if (input && input.files && input.files.length > 5) {
+        e.preventDefault();
+        alert('훈련 스크린샷은 최대 5장까지 업로드할 수 있습니다.');
+        return;
+    }
     document.getElementById('submit-btn').disabled = true;
     document.getElementById('loading').classList.add('active');
 });

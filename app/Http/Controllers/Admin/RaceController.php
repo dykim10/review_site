@@ -16,7 +16,7 @@ class RaceController extends Controller
 
     public function index(PilotEditionService $pilotEditions)
     {
-        $races = $this->raceService->getAdminList();
+        $races = $this->raceService->getAdminList(request()->only('q'));
         $waSyncStatuses = collect([2026, 2025, 2024, 2023, 2022])
             ->mapWithKeys(fn (int $y) => [$y => Cache::get(WaLabelSyncService::cacheKey($y))])
             ->filter();
@@ -33,19 +33,34 @@ class RaceController extends Controller
 
     public function store(StoreRaceRequest $request)
     {
-        $this->raceService->create($request->validated(), $request->input('distances_raw', ''));
+        $this->raceService->create(
+            $request->validated(),
+            (string) ($request->input('distances_raw') ?? ''),
+            $request->input('categories', []) ?? [],
+        );
+
         return redirect()->route('admin.races.index')->with('success', '대회가 등록되었습니다.');
     }
 
     public function edit(Race $race)
     {
-        $race->load('latestEdition');
+        $race->load(['latestEdition.entryCategories', 'editions']);
+
+        if ($race->latestEdition) {
+            return redirect()->route('admin.race-editions.edit', $race->latestEdition);
+        }
+
         return view('admin.races.edit', compact('race'));
     }
 
     public function update(StoreRaceRequest $request, Race $race)
     {
-        $this->raceService->update($race, $request->validated(), $request->input('distances_raw', ''));
+        $this->raceService->update(
+            $race,
+            $request->validated(),
+            (string) ($request->input('distances_raw') ?? ''),
+            $request->input('categories', []) ?? [],
+        );
         return redirect()->route('admin.races.index')->with('success', '대회 정보가 수정되었습니다.');
     }
 

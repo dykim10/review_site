@@ -41,10 +41,12 @@
                     <input type="text" name="organizer" value="{{ old('organizer', $race->organizer) }}" class="adm-input">
                 </div>
                 <div class="adm-field">
-                    <label class="adm-label">참가비 (원)</label>
+                    <label class="adm-label">참가비 (원) <span class="adm-label-hint">레거시·선택</span></label>
                     <input type="number" name="entry_fee" value="{{ old('entry_fee', $race->latestEdition?->entry_fee) }}" min="0" class="adm-input">
                 </div>
             </div>
+
+            @include('admin.races.partials.entry-categories', ['edition' => $race->latestEdition])
 
             <div class="adm-grid-2">
                 <div class="adm-field">

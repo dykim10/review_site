@@ -147,6 +147,7 @@
     .rc-link:hover { color: #E80043; }
     .rc-cta { font-size: 0.78rem; font-weight: 600; color: #fff; background: #E80043; padding: 0.4rem 0.9rem; border-radius: 999px; transition: background 0.15s; flex-shrink: 0; }
     .rc-cta:hover { background: #C20038; }
+    .rc-sparkline-wrap { flex-shrink: 0; opacity: 0.9; }
 
     /* ── 지난 대회: race별 그룹 카드 ─────────────── */
     .rc-card-grouped { display: block; cursor: default; }
@@ -361,7 +362,7 @@
                     @php
                         $distArr = $parseDist($ed->distances ?? null);
                     @endphp
-                    <a href="{{ route('races.show-edition', [$ed->race_id, $ed->edition_id]) }}#reviews" class="rc-card">
+                    <a href="{{ route('races.show-edition', [$ed->race_id, $ed->edition_id]) }}" class="rc-card">
                         <div class="rc-top">
                             <div class="badge-row">
                                 @if($waLabelClassOf($ed->wa_label))
@@ -439,16 +440,34 @@
                         </div>
 
                         <div class="rc-title-row">
-                            <a href="{{ route('races.show-edition', [$group->race_id, $group->current_year_edition_id]) }}#reviews" class="rc-title-link">
+                            <a href="{{ route('races.show', $group->race_id) }}" class="rc-title-link">
                                 <span class="rc-title">{{ $group->name }}</span>
                             </a>
-                            @if($reviewCount > 0 && $avgRating !== null)
-                                <span class="rc-rating-mini">
-                                    <svg class="star-svg" viewBox="0 0 24 24"><polygon class="star-fill" points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
-                                    <span class="rc-score">{{ number_format($avgRating, 1) }}</span>
-                                    <span class="rc-cnt">({{ $reviewCount }}건)</span>
-                                </span>
-                            @endif
+                            <div style="display:flex;align-items:center;gap:0.65rem;">
+                                @php
+                                    $sparkProfile = null;
+                                    foreach ($group->editions as $edChip) {
+                                        if (! empty($elevationSparklines[$edChip->edition_id] ?? null)) {
+                                            $sparkProfile = $elevationSparklines[$edChip->edition_id];
+                                            break;
+                                        }
+                                    }
+                                @endphp
+                                @if($sparkProfile)
+                                    <span class="rc-sparkline-wrap" title="코스 고저도">
+                                        @include('race-courses.partials.elevation-sparkline', [
+                                            'profile' => $sparkProfile,
+                                        ])
+                                    </span>
+                                @endif
+                                @if($reviewCount > 0 && $avgRating !== null)
+                                    <span class="rc-rating-mini">
+                                        <svg class="star-svg" viewBox="0 0 24 24"><polygon class="star-fill" points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
+                                        <span class="rc-score">{{ number_format($avgRating, 1) }}</span>
+                                        <span class="rc-cnt">({{ $reviewCount }}건)</span>
+                                    </span>
+                                @endif
+                            </div>
                         </div>
 
                         @if($waLabelClassOf($group->wa_label))
@@ -473,7 +492,7 @@
                             @else
                                 <span class="rc-no-data">아직 등록된 리뷰가 없습니다</span>
                             @endif
-                            <a href="{{ route('races.show-edition', [$group->race_id, $group->current_year_edition_id]) }}#reviews" class="rc-cta">후기 보기 →</a>
+                            <a href="{{ route('races.show-edition', [$group->race_id, $group->link_edition_id]) }}#reviews" class="rc-cta">후기 보기 →</a>
                         </div>
                     </div>
                 @empty

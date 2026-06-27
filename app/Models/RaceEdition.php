@@ -64,6 +64,12 @@ class RaceEdition extends Model
         return $this->hasMany(EditionFeedback::class, 'race_edition_id');
     }
 
+    public function entryCategories()
+    {
+        return $this->hasMany(RaceEntryCategory::class, 'race_edition_id')
+            ->orderBy('sort_order');
+    }
+
     public function isUpcoming(): bool
     {
         return $this->status === 'upcoming';

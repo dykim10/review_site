@@ -3,6 +3,12 @@
 use Illuminate\Support\Str;
 use Pdo\Mysql;
 
+$dbTarget = strtolower((string) env('DB_TARGET', 'test'));
+// DB_TARGET=live 는 APP_ENV=local 에서만 동작 (EC2/운영은 DB_CONNECTION 고정)
+$dbDefault = ($dbTarget === 'live' && env('APP_ENV') === 'local')
+    ? 'pgsql_live'
+    : env('DB_CONNECTION', 'sqlite');
+
 return [
 
     /*
@@ -10,14 +16,15 @@ return [
     | Default Database Connection Name
     |--------------------------------------------------------------------------
     |
-    | Here you may specify which of the database connections below you wish
-    | to use as your default connection for database operations. This is
-    | the connection which will be utilized unless another connection
-    | is explicitly specified when you execute a query / statement.
+    | [로컬 전용] DB_TARGET=test → DB_* (테스트 Supabase)
+    |             DB_TARGET=live  → DB_LIVE_* (실서버 Supabase, APP_ENV=local 일 때만)
+    |
+    | EC2·운영(APP_ENV=production)에서는 DB_TARGET 값과 무관하게 DB_CONNECTION 만 사용.
+    | 전환 후: php artisan config:clear && php artisan serve 재시작
     |
     */
 
-    'default' => env('DB_CONNECTION', 'sqlite'),
+    'default' => $dbDefault,
 
     /*
     |--------------------------------------------------------------------------
@@ -92,6 +99,26 @@ return [
             'database' => env('DB_DATABASE', 'laravel'),
             'username' => env('DB_USERNAME', 'root'),
             'password' => env('DB_PASSWORD', ''),
+            'charset' => env('DB_CHARSET', 'utf8'),
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'search_path' => 'public,review',
+            'sslmode' => env('DB_SSLMODE', 'prefer'),
+        ],
+
+        'pgsql_live' => [
+            'driver' => 'pgsql',
+            'url' => env('DB_LIVE_URL'),
+            'host' => env('DB_LIVE_HOST', '127.0.0.1'),
+            'port' => env('DB_LIVE_PORT', '5432'),
+            'database' => env('DB_LIVE_DATABASE', 'postgres'),
+            // DB_LIVE_READONLY=true 이고 읽기 전용 유저가 있으면 해당 계정 사용
+            'username' => (filter_var(env('DB_LIVE_READONLY', 'true'), FILTER_VALIDATE_BOOLEAN) && env('DB_LIVE_READ_USERNAME'))
+                ? env('DB_LIVE_READ_USERNAME')
+                : env('DB_LIVE_USERNAME'),
+            'password' => (filter_var(env('DB_LIVE_READONLY', 'true'), FILTER_VALIDATE_BOOLEAN) && env('DB_LIVE_READ_USERNAME'))
+                ? env('DB_LIVE_READ_PASSWORD', '')
+                : env('DB_LIVE_PASSWORD', ''),
             'charset' => env('DB_CHARSET', 'utf8'),
             'prefix' => '',
             'prefix_indexes' => true,

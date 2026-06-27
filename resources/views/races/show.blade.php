@@ -166,6 +166,7 @@
     button.edition-tab { cursor: pointer; font-family: inherit; appearance: none; }
 
     #course-map-section { scroll-margin-top: 5rem; }
+    #elevation-profile-section { scroll-margin-top: 5rem; }
 
     #reviews { scroll-margin-top: 5rem; }
 
@@ -451,7 +452,9 @@
                 </div>
                 <div>
                     <div class="detail-label">참가비</div>
-                    <div class="detail-value">{{ $latestEdition?->entry_fee ? number_format($latestEdition->entry_fee).'원~' : '-' }}</div>
+                    <div class="detail-value">
+                        @include('races.partials.entry-fee-display', ['edition' => $latestEdition])
+                    </div>
                 </div>
                 @if($race->organizer)
                     <div>
@@ -671,6 +674,53 @@
                         var payload = courseMapData[type];
                         if (payload && typeof pacRunInitCourseMap === 'function') {
                             pacRunInitCourseMap('race-course-map', payload.coordinates, payload.markers);
+                        }
+                    });
+                });
+            });
+            </script>
+            @endpush
+        @endif
+        @endif
+
+        {{-- Elevation profile --}}
+        @if($hasElevationProfile)
+        <div class="info-card" id="elevation-profile-section">
+            <div class="card-heading">고저도 프로파일</div>
+            @if($coursesForElevation->count() > 1)
+                <nav class="edition-tabs" aria-label="고저도 코스 타입" style="margin-bottom:1rem;">
+                    @foreach($coursesForElevation as $idx => $elevCourse)
+                        <button type="button"
+                                class="edition-tab elevation-type-tab {{ $idx === 0 ? 'edition-tab-active' : '' }}"
+                                data-course-type="{{ $elevCourse->course_type }}">
+                            {{ ['FULL' => '풀마라톤', 'HALF' => '하프', '10K' => '10K'][$elevCourse->course_type] ?? $elevCourse->course_type }}
+                        </button>
+                    @endforeach
+                </nav>
+            @endif
+            @php $firstElevCourse = $coursesForElevation->first(); @endphp
+            @include('race-courses.partials.elevation-profile', [
+                'chartId' => 'race-elevation-chart',
+                'profile' => $firstElevCourse->elevation_data,
+            ])
+        </div>
+        @if($coursesForElevation->count() > 1)
+            @push('scripts')
+            <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                var elevationData = @json(
+                    $coursesForElevation->keyBy('course_type')->map(fn ($c) => $c->elevation_data)
+                );
+                document.querySelectorAll('.elevation-type-tab').forEach(function(btn) {
+                    btn.addEventListener('click', function() {
+                        var type = btn.dataset.courseType;
+                        document.querySelectorAll('.elevation-type-tab').forEach(function(b) {
+                            b.classList.remove('edition-tab-active');
+                        });
+                        btn.classList.add('edition-tab-active');
+                        var profile = elevationData[type];
+                        if (profile && typeof pacRunSwitchElevationChart === 'function') {
+                            pacRunSwitchElevationChart('race-elevation-chart-root', profile);
                         }
                     });
                 });
@@ -908,7 +958,9 @@
             </div>
             <div class="s-row">
                 <span class="s-key">참가비</span>
-                <span class="s-val">{{ $latestEdition?->entry_fee ? number_format($latestEdition->entry_fee).'원~' : '-' }}</span>
+                <span class="s-val">
+                    @include('races.partials.entry-fee-display', ['edition' => $latestEdition])
+                </span>
             </div>
         </div>
 

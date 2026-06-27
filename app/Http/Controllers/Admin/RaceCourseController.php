@@ -46,7 +46,7 @@ class RaceCourseController extends Controller
         $edition = RaceEdition::findOrFail($validated['race_edition_id']);
 
         try {
-            $this->service->uploadAndSave(
+            $course = $this->service->uploadAndSave(
                 $edition,
                 $validated['course_type'],
                 $request->file('gpx_file'),
@@ -60,8 +60,12 @@ class RaceCourseController extends Controller
             return back()->withErrors(['gpx_file' => $e->getMessage()])->withInput();
         }
 
-        return redirect()->route('admin.race-courses.index')
-            ->with('success', 'GPX 코스가 등록되었습니다.');
+        $flash = ['success' => 'GPX 코스가 등록되었습니다.'];
+        if (! $this->service->elevationProfileGenerated($course)) {
+            $flash['warning'] = '고저도 프로파일 생성에 실패했습니다. GPX는 저장되었으며 나중에 재업로드할 수 있습니다.';
+        }
+
+        return redirect()->route('admin.race-courses.index')->with($flash);
     }
 
     public function edit(RaceCourse $raceCourse)
@@ -81,7 +85,7 @@ class RaceCourseController extends Controller
         ]);
 
         try {
-            $this->service->update(
+            $course = $this->service->update(
                 $raceCourse,
                 [
                     'source'       => $validated['source'] ?? 'manual',
@@ -98,8 +102,12 @@ class RaceCourseController extends Controller
             ? 'GPX 코스가 수정되었습니다. (파일 교체 포함)'
             : 'GPX 코스 정보가 수정되었습니다.';
 
-        return redirect()->route('admin.race-courses.index')
-            ->with('success', $message);
+        $flash = ['success' => $message];
+        if ($request->hasFile('gpx_file') && ! $this->service->elevationProfileGenerated($course)) {
+            $flash['warning'] = '고저도 프로파일 생성에 실패했습니다. GPX는 저장되었습니다.';
+        }
+
+        return redirect()->route('admin.race-courses.index')->with($flash);
     }
 
     public function destroy(RaceCourse $raceCourse)

@@ -11,6 +11,22 @@ class StoreRaceRequest extends FormRequest
         return $this->user() && in_array($this->user()->role, ['super_admin', 'crew_admin']);
     }
 
+    protected function prepareForValidation(): void
+    {
+        $cats = $this->input('categories', []);
+        if (! is_array($cats)) {
+            return;
+        }
+
+        $filtered = array_values(array_filter($cats, function ($cat) {
+            return filled($cat['name'] ?? null)
+                || filled($cat['distance_km'] ?? null)
+                || filled($cat['entry_fee'] ?? null);
+        }));
+
+        $this->merge(['categories' => $filtered]);
+    }
+
     public function rules(): array
     {
         return [
@@ -26,6 +42,10 @@ class StoreRaceRequest extends FormRequest
             'reg_end'     => 'nullable|date|after_or_equal:reg_start',
             'status'         => 'nullable|string|in:접수전,접수중,접수마감,대회종료',
             'weather_stn_id' => 'nullable|integer|min:1',
+            'categories'                 => ['nullable', 'array'],
+            'categories.*.name'          => ['required', 'string', 'max:100'],
+            'categories.*.distance_km'   => ['required', 'numeric', 'min:0', 'max:999.999'],
+            'categories.*.entry_fee'     => ['required', 'integer', 'min:0'],
         ];
     }
 
@@ -34,7 +54,12 @@ class StoreRaceRequest extends FormRequest
         return [
             'name.required'          => '대회명은 필수입니다.',
             'reg_end.after_or_equal' => '접수 종료일은 시작일 이후여야 합니다.',
-            'website_url.url'  => '올바른 URL 형식을 입력해주세요.',
+            'website_url.url'        => '올바른 URL 형식을 입력해주세요.',
+            'categories.*.name.required'        => '종목 이름을 입력해 주세요.',
+            'categories.*.distance_km.required' => '거리(km)를 입력해 주세요.',
+            'categories.*.distance_km.numeric'  => '거리는 숫자로 입력해 주세요. (예: 5.5)',
+            'categories.*.entry_fee.required'   => '참가비를 입력해 주세요.',
+            'categories.*.entry_fee.integer'    => '참가비는 숫자(원)로 입력해 주세요.',
         ];
     }
 }

@@ -13,6 +13,8 @@ return [
             'city'            => '서울',
             'weather_stn_id'  => 108,
             'search_names'    => ['서울마라톤', '서울국제마라톤', '동아마라톤'],
+            // WA sync 카탈로그 races와 매칭 (pilot provision 시 edition만 추가)
+            'catalog_race_id' => null,
             'dates'           => [
                 2024 => '2024-03-03',
                 2025 => '2025-03-16',
@@ -23,6 +25,7 @@ return [
             'city'            => '대구',
             'weather_stn_id'  => 143,
             'search_names'    => ['대구국제마라톤', '대구마라톤'],
+            'catalog_race_id' => null,
             'dates'           => [
                 2024 => '2024-04-07',
                 2025 => '2025-02-23',
@@ -33,6 +36,7 @@ return [
             'city'            => '경주',
             'weather_stn_id'  => 136,
             'search_names'    => ['경주마라톤', '경주국제마라톤'],
+            'catalog_race_id' => null,
             'dates'           => [
                 2024 => '2024-10-20',
                 2025 => '2025-10-18',
@@ -43,6 +47,7 @@ return [
             'city'            => '군산',
             'weather_stn_id'  => 146,
             'search_names'    => ['군산', '새만금'],
+            'catalog_race_id' => null,
             'dates'           => [
                 2024 => '2024-04-07',
                 2025 => '2025-04-06',

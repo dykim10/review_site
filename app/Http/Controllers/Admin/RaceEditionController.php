@@ -7,6 +7,7 @@ use App\Http\Requests\StoreRaceEditionRequest;
 use App\Models\Race;
 use App\Models\RaceEdition;
 use App\Services\RaceEditionService;
+use App\Services\RaceService;
 use App\Services\WeatherService;
 use Illuminate\Support\Facades\DB;
 
@@ -14,6 +15,7 @@ class RaceEditionController extends Controller
 {
     public function __construct(
         private RaceEditionService $service,
+        private RaceService $raceService,
         private WeatherService $weatherService,
     ) {}
 
@@ -29,7 +31,12 @@ class RaceEditionController extends Controller
             $query->where('year', request('year'));
         }
         if (request('q')) {
-            $query->where('name', 'ilike', '%' . request('q') . '%');
+            $term = '%' . addcslashes(request('q'), '%_\\') . '%';
+            $query->where(function ($builder) use ($term) {
+                $builder->where('name', 'ilike', $term)
+                    ->orWhere('city', 'ilike', $term)
+                    ->orWhere('location', 'ilike', $term);
+            });
         }
 
         $editions = $query->orderByDesc('race_date')->paginate(20)->withQueryString();
@@ -52,45 +59,45 @@ class RaceEditionController extends Controller
     {
         $edition = $this->service->create($request->validated());
 
-        // 장소 기반 기상청 지점코드 자동 추론
         if (!$edition->weather_stn_id && ($edition->location || $edition->city)) {
             $this->weatherService->autoResolveStnForEdition($edition);
         }
 
-        return redirect()->route('admin.race-editions.index')
+        $this->raceService->syncEntryCategories($edition, $request->input('categories', []) ?? []);
+
+        return redirect()->route('admin.race-editions.edit', $edition)
             ->with('success', '대회 인스턴스가 등록되었습니다.');
     }
 
     public function edit(RaceEdition $raceEdition)
     {
+        $raceEdition->load(['race', 'entryCategories']);
+
         $races = Race::with('latestEdition')->orderBy('name')->get(['id', 'name']);
+
+        $siblingEditions = $raceEdition->race_id
+            ? RaceEdition::where('race_id', $raceEdition->race_id)->orderByDesc('year')->get(['id', 'year', 'race_date'])
+            : collect();
+
         return view('admin.race-editions.edit', [
-            'edition' => $raceEdition,
-            'races'   => $races,
+            'edition'         => $raceEdition,
+            'race'            => $raceEdition->race,
+            'races'           => $races,
+            'siblingEditions' => $siblingEditions,
         ]);
     }
 
     public function update(StoreRaceEditionRequest $request, RaceEdition $raceEdition)
     {
-        $locationChanged =
-            ($request->location !== $raceEdition->location) ||
-            ($request->city !== $raceEdition->city);
+        $this->raceService->updateEdition(
+            $raceEdition,
+            $request->validated(),
+            (string) ($request->input('distances_raw') ?? ''),
+            $request->input('categories', []) ?? [],
+        );
 
-        $validated = $request->validated();
-
-        if ($locationChanged && !$request->weather_stn_id) {
-            $validated['weather_stn_id'] = null;
-        }
-
-        $this->service->update($raceEdition, $validated);
-        $raceEdition->refresh();
-
-        if ($locationChanged && !$raceEdition->weather_stn_id) {
-            $this->weatherService->autoResolveStnForEdition($raceEdition);
-        }
-
-        return redirect()->route('admin.race-editions.index')
-            ->with('success', '대회 인스턴스가 수정되었습니다.');
+        return redirect()->route('admin.race-editions.edit', $raceEdition)
+            ->with('success', '대회 정보가 저장되었습니다.');
     }
 
     public function destroy(RaceEdition $raceEdition)

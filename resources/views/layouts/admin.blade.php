@@ -66,6 +66,7 @@
 
         .adm-card { background: #fff; border: 1px solid #E5E7EB; border-radius: 10px; overflow: hidden; }
         .adm-alert-success { background: #F0FDF4; border: 1px solid #BBF7D0; color: #15803D; border-radius: 8px; padding: 0.7rem 1rem; font-size: 0.83rem; margin-bottom: 1.25rem; }
+        .adm-alert-warning { background: #FFFBEB; border: 1px solid #FDE68A; color: #B45309; border-radius: 8px; padding: 0.7rem 1rem; font-size: 0.83rem; margin-bottom: 1.25rem; }
         .adm-alert-error { background: #FEF2F2; border: 1px solid #FECACA; color: #DC2626; border-radius: 8px; padding: 0.7rem 1rem; font-size: 0.83rem; margin-bottom: 1.25rem; }
 
         .adm-table { width: 100%; font-size: 0.84rem; border-collapse: collapse; }
@@ -120,7 +121,7 @@
                     </a>
                     <a href="{{ route('admin.race-editions.index') }}" class="adm-nav-item {{ request()->routeIs('admin.race-editions.*') ? 'adm-nav-item-active' : '' }}">
                         <svg class="adm-nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                        대회 인스턴스
+                        연도별 대회
                     </a>
                     <a href="{{ route('admin.race-courses.index') }}" class="adm-nav-item {{ request()->routeIs('admin.race-courses.*') ? 'adm-nav-item-active' : '' }}">
                         <svg class="adm-nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 20c2-4 4-6 7-6s4 4 7 4 3-3 4-6"/></svg>
@@ -147,6 +148,9 @@
             <div class="adm-content">
                 @if(session('success'))
                     <div class="adm-alert-success">{{ session('success') }}</div>
+                @endif
+                @if(session('warning'))
+                    <div class="adm-alert-warning">{{ session('warning') }}</div>
                 @endif
                 @if(session('error'))
                     <div class="adm-alert-error">{{ session('error') }}</div>

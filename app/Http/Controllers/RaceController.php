@@ -29,6 +29,19 @@ class RaceController extends Controller
         $sections = $this->raceService->getSectionedList($filters);
         $stats    = $this->raceService->getGlobalStats();
 
+        $editionIds = collect($sections['past'])
+            ->flatMap(fn ($g) => collect($g->editions)->pluck('edition_id'))
+            ->filter()
+            ->unique()
+            ->values();
+        $elevationSparklines = RaceCourse::query()
+            ->whereIn('race_edition_id', $editionIds)
+            ->where('course_type', 'FULL')
+            ->whereNotNull('elevation_data')
+            ->get(['race_edition_id', 'elevation_data'])
+            ->filter(fn ($c) => is_array($c->elevation_data) && ! empty($c->elevation_data['points']))
+            ->mapWithKeys(fn ($c) => [$c->race_edition_id => $c->elevation_data]);
+
         return view('races.index', [
             'upcoming'    => $sections['upcoming'],
             'past'        => $sections['past'],
@@ -36,6 +49,7 @@ class RaceController extends Controller
             'years'       => $sections['years'],
             'stats'       => $stats,
             'filters'     => $filters,
+            'elevationSparklines' => $elevationSparklines,
         ]);
     }
 
@@ -65,6 +79,7 @@ class RaceController extends Controller
     private function loadEditions(Race $race)
     {
         return $race->editions()
+            ->with('entryCategories')
             ->withCount('reviews')
             ->orderByDesc('year')
             ->get();
@@ -81,6 +96,8 @@ class RaceController extends Controller
         $hasOfficialGpx  = false;
         $coursesForMap   = collect();
         $hasCourseMap    = false;
+        $coursesForElevation = collect();
+        $hasElevationProfile = false;
 
         if ($latestEdition) {
             $hasOfficialGpx = RaceCourse::where('race_edition_id', $latestEdition->id)
@@ -93,6 +110,14 @@ class RaceController extends Controller
                 ->get(['course_type', 'coordinates', 'markers']);
 
             $hasCourseMap = $coursesForMap->isNotEmpty();
+
+            $coursesForElevation = RaceCourse::where('race_edition_id', $latestEdition->id)
+                ->whereNotNull('elevation_data')
+                ->orderByRaw("CASE course_type WHEN 'FULL' THEN 1 WHEN 'HALF' THEN 2 WHEN '10K' THEN 3 ELSE 4 END")
+                ->get(['course_type', 'elevation_data'])
+                ->filter(fn ($c) => is_array($c->elevation_data) && ! empty($c->elevation_data['points']));
+
+            $hasElevationProfile = $coursesForElevation->isNotEmpty();
 
             if ($latestEdition->isUpcoming()) {
                 $feedbacks = EditionFeedback::where('race_edition_id', $latestEdition->id)
@@ -129,6 +154,7 @@ class RaceController extends Controller
             'weather', 'editions', 'myReview', 'latestEdition',
             'youtubeItems', 'instagramItems', 'feedbacks', 'hasOfficialGpx',
             'coursesForMap', 'hasCourseMap',
+            'coursesForElevation', 'hasElevationProfile',
         ));
     }
 }

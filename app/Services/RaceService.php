@@ -45,18 +45,31 @@ class RaceService
 
     // ─── 관리자용 ─────────────────────────────────────────────
 
-    public function getAdminList(int $perPage = 20): LengthAwarePaginator
+    public function getAdminList(array $filters = [], int $perPage = 20): LengthAwarePaginator
     {
-        return Race::with('latestEdition')
-            ->orderByDesc('created_at')
-            ->paginate($perPage);
+        $query = Race::with('latestEdition')
+            ->orderByDesc('created_at');
+
+        $q = trim($filters['q'] ?? '');
+        if ($q !== '') {
+            $term = '%' . addcslashes($q, '%_\\') . '%';
+            $query->where(function ($builder) use ($term) {
+                $builder->where('name', 'ilike', $term)
+                    ->orWhere('name_en', 'ilike', $term)
+                    ->orWhere('city', 'ilike', $term)
+                    ->orWhere('organizer', 'ilike', $term);
+            });
+        }
+
+        return $query->paginate($perPage)->withQueryString();
     }
 
     /**
      * 대회 등록 — races 마스터 생성 + race_editions 최초 인스턴스 생성
      */
-    public function create(array $validated, string $distancesRaw = ''): Race
+    public function create(array $validated, ?string $distancesRaw = null, array $categories = []): Race
     {
+        $distancesRaw = $distancesRaw ?? '';
         $raceData             = array_intersect_key($validated, array_flip(self::RACE_FIELDS));
         $raceData['distances'] = $this->parseDistances($distancesRaw);
 
@@ -80,14 +93,17 @@ class RaceService
             app(WeatherService::class)->autoResolveStnForEdition($edition);
         }
 
+        $this->syncEntryCategories($edition, $categories);
+
         return $race->fresh();
     }
 
     /**
      * 대회 수정 — races 마스터 수정 + 최신 race_edition 동기화
      */
-    public function update(Race $race, array $validated, string $distancesRaw = ''): Race
+    public function update(Race $race, array $validated, ?string $distancesRaw = null, array $categories = []): Race
     {
+        $distancesRaw = $distancesRaw ?? '';
         $raceData             = array_intersect_key($validated, array_flip(self::RACE_FIELDS));
         $raceData['distances'] = $this->parseDistances($distancesRaw);
 
@@ -115,11 +131,13 @@ class RaceService
             if ($locationChanged && !$edition->weather_stn_id) {
                 app(WeatherService::class)->autoResolveStnForEdition($edition);
             }
+
+            $this->syncEntryCategories($edition, $categories);
         } else {
             $year = isset($editionData['race_date']) && $editionData['race_date']
                 ? \Carbon\Carbon::parse($editionData['race_date'])->year
                 : 0;
-            RaceEdition::create(array_merge($editionData, [
+            $edition = RaceEdition::create(array_merge($editionData, [
                 'race_id'     => $race->id,
                 'name'        => $race->name,
                 'year'        => $year,
@@ -127,14 +145,98 @@ class RaceService
                 'is_domestic' => $race->is_domestic ?? true,
                 'country'     => $race->country ?? '대한민국',
             ]));
+
+            $this->syncEntryCategories($edition, $categories);
         }
 
         return $race->fresh();
     }
 
+    /**
+     * 특정 edition + 연결된 race 카탈로그를 한 번에 수정 (관리자 통합 폼).
+     */
+    public function updateEdition(
+        RaceEdition $edition,
+        array $validated,
+        ?string $distancesRaw = null,
+        array $categories = [],
+    ): RaceEdition {
+        $distancesRaw = $distancesRaw ?? '';
+        $race = $edition->race;
+
+        if ($race) {
+            $raceData = array_intersect_key($validated, array_flip(['organizer', 'website_url', 'official_url']));
+            $raceData['distances'] = $this->parseDistances($distancesRaw);
+            if (isset($validated['name'])) {
+                $raceData['name'] = $validated['name'];
+            }
+            if (isset($validated['city'])) {
+                $raceData['city'] = $validated['city'];
+            }
+            $race->update($raceData);
+            $race->refresh();
+        }
+
+        $editionData = array_intersect_key($validated, array_flip([
+            ...self::EDITION_FIELDS,
+            'year', 'is_domestic', 'country', 'is_review_open', 'race_id', 'name', 'city',
+        ]));
+
+        $locationChanged =
+            (isset($editionData['location']) && $editionData['location'] !== $edition->location) ||
+            (isset($editionData['city']) && $editionData['city'] !== $edition->city);
+
+        if ($locationChanged && empty($editionData['weather_stn_id'])) {
+            $editionData['weather_stn_id'] = null;
+        }
+
+        if ($race && isset($validated['name'])) {
+            $editionData['name'] = $validated['name'];
+        }
+        if ($race && isset($validated['city'])) {
+            $editionData['city'] = $validated['city'];
+        }
+
+        $edition->update($editionData);
+        $edition->refresh();
+
+        if ($locationChanged && ! $edition->weather_stn_id && ($edition->location || $edition->city)) {
+            app(WeatherService::class)->autoResolveStnForEdition($edition);
+        }
+
+        $this->syncEntryCategories($edition, $categories);
+
+        return $edition->fresh(['entryCategories', 'race']);
+    }
+
     public function delete(Race $race): void
     {
         $race->delete();
+    }
+
+    /**
+     * 에디션 참가 종목·참가비 전량 교체.
+     *
+     * @param  list<array{name?: string, distance_km?: mixed, entry_fee?: mixed}>  $categories
+     */
+    public function syncEntryCategories(RaceEdition $edition, array $categories): void
+    {
+        $rows = array_values(array_filter($categories, function ($cat) {
+            return filled($cat['name'] ?? null)
+                || filled($cat['distance_km'] ?? null)
+                || filled($cat['entry_fee'] ?? null);
+        }));
+
+        $edition->entryCategories()->delete();
+
+        foreach ($rows as $i => $cat) {
+            $edition->entryCategories()->create([
+                'name'        => $cat['name'],
+                'distance_km' => $cat['distance_km'],
+                'entry_fee'   => (int) $cat['entry_fee'],
+                'sort_order'  => $i,
+            ]);
+        }
     }
 
     // ─── Private ──────────────────────────────────────────────

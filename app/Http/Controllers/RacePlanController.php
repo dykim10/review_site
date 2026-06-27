@@ -59,6 +59,8 @@ class RacePlanController extends Controller
             'recent_10k_h'    => 'nullable|integer|min:0|max:9',
             'recent_10k_m'    => 'nullable|integer|min:0|max:59',
             'recent_10k_s'    => 'nullable|integer|min:0|max:59',
+            'training_images'   => 'nullable|array|max:5',
+            'training_images.*' => 'file|image|mimes:jpeg,jpg,png,gif,webp|max:10240',
         ]);
 
         $goalTime = sprintf('%d:%02d:%02d',
@@ -82,15 +84,28 @@ class RacePlanController extends Controller
             return back()->with('error', '공식 GPX 코스가 준비되지 않았습니다.')->withInput();
         }
 
+        $parsedImageLogs = [];
+        $uploadedImages = $request->file('training_images', []);
+        if (! empty($uploadedImages)) {
+            try {
+                $parsedImageLogs = $this->racePlanService->parseEphemeralTrainingImages(
+                    is_array($uploadedImages) ? $uploadedImages : [$uploadedImages]
+                );
+            } catch (\RuntimeException $e) {
+                return back()->with('error', $e->getMessage())->withInput();
+            }
+        }
+
         try {
             $plan = $this->racePlanService->generate(
-                edition:        $edition,
-                userId:         auth()->id(),
-                courseType:     $validated['course_type'],
-                goalTime:       $goalTime,
-                trainingStatus: $validated['training_status'],
-                recentLongKm:   $validated['recent_long_km'] ?? null,
-                recent10kTime:  $recent10kTime,
+                edition:         $edition,
+                userId:          auth()->id(),
+                courseType:      $validated['course_type'],
+                goalTime:        $goalTime,
+                trainingStatus:  $validated['training_status'],
+                recentLongKm:    $validated['recent_long_km'] ?? null,
+                recent10kTime:   $recent10kTime,
+                parsedImageLogs: $parsedImageLogs,
             );
         } catch (\RuntimeException $e) {
             return back()->with('error', $e->getMessage())->withInput();

@@ -11,6 +11,7 @@
 
 @section('content')
     <div style="background:#fff;border:1px solid #E5E7EB;border-radius:10px;padding:1.2rem;margin-bottom:1.5rem;">
+        <form method="GET" action="{{ route('admin.race-editions.index') }}">
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0.8rem;align-items:flex-end;">
             <div>
                 <label class="adm-label">국내/해외</label>
@@ -34,9 +35,15 @@
                 <input type="text" name="q" value="{{ request('q') }}" placeholder="검색" class="adm-input" onchange="this.form?.submit()">
             </div>
             <div>
-                <a href="{{ route('admin.race-editions.index') }}" class="adm-btn adm-btn-ghost" style="width:100%;">초기화</a>
+                <button type="submit" class="adm-btn adm-btn-primary" style="width:100%;">검색</button>
             </div>
+            @if(request()->hasAny(['q', 'year', 'is_domestic']))
+            <div>
+                <a href="{{ route('admin.race-editions.index') }}" class="adm-btn adm-btn-ghost" style="width:100%;display:block;text-align:center;">초기화</a>
+            </div>
+            @endif
         </div>
+        </form>
     </div>
 
     <div class="adm-card">

@@ -1,22 +1,60 @@
 @extends('layouts.admin')
-@section('title', '대회 인스턴스 수정 — PAC-RUN Admin')
-@section('page-title', '대회 인스턴스 수정')
+@section('title', '대회 수정 — PAC-RUN Admin')
+@section('page-title', '대회 수정')
 
 @section('content')
+    @if(session('success'))
+        <div class="adm-alert adm-alert-success" style="margin-bottom:1rem;">{{ session('success') }}</div>
+    @endif
+
     <div class="adm-form-card">
+        @if($siblingEditions->count() > 1)
+            <div style="margin-bottom:1.25rem;padding-bottom:1rem;border-bottom:1px solid #E5E7EB;">
+                <label class="adm-label">연도 선택</label>
+                <select class="adm-input" style="max-width:220px;" onchange="if (this.value) window.location = this.value;">
+                    @foreach($siblingEditions as $sibling)
+                        <option value="{{ route('admin.race-editions.edit', $sibling) }}"
+                            @selected($sibling->id === $edition->id)>
+                            {{ $sibling->year }}년
+                            @if($sibling->race_date)
+                                ({{ $sibling->race_date->format('Y.m.d') }})
+                            @endif
+                        </option>
+                    @endforeach
+                </select>
+                <p style="margin:0.4rem 0 0;font-size:0.75rem;color:#9CA3AF;">
+                    edition #{{ $edition->id }}
+                    @if($race)
+                        · races #{{ $race->id }}
+                    @endif
+                </p>
+            </div>
+        @else
+            <p style="margin:0 0 1rem;font-size:0.75rem;color:#9CA3AF;">
+                edition #{{ $edition->id }}
+                @if($race)
+                    · races #{{ $race->id }}
+                @endif
+            </p>
+        @endif
+
         <form method="POST" action="{{ route('admin.race-editions.update', $edition) }}" x-data="{ isDomestic: {{ old('is_domestic', $edition->is_domestic ? '1' : '0') }} === '1' }">
             @csrf @method('PUT')
 
             <div class="adm-field">
                 <label class="adm-label">원본 대회 연결 <span class="adm-label-hint">(선택)</span></label>
                 <select name="race_id" class="adm-input">
-                    <option value="">연결 안 함</option>
-                    @foreach($races as $race)
-                        <option value="{{ $race->id }}" @selected(old('race_id', $edition->race_id) == $race->id)>
-                            {{ $race->name }}
+                    <option value="">연결 안 함 (독립 edition)</option>
+                    @foreach($races as $r)
+                        <option value="{{ $r->id }}" @selected(old('race_id', $edition->race_id) == $r->id)>
+                            {{ $r->name }}
                         </option>
                     @endforeach
                 </select>
+            </div>
+
+            <div style="font-weight:700;font-size:0.9rem;margin:1.25rem 0 0.75rem;">
+                {{ $edition->year }}년 대회 정보
             </div>
 
             <div class="adm-field">
@@ -40,13 +78,18 @@
             <div class="adm-grid-2">
                 <div class="adm-field">
                     <label class="adm-label">시작 시간</label>
-                    <input type="text" name="race_time" value="{{ old('race_time', $edition->race_time) }}" class="adm-input">
+                    <input type="text" name="race_time" value="{{ old('race_time', $edition->race_time) }}" placeholder="예: 09:00" class="adm-input">
                 </div>
                 <div class="adm-field">
-                    <label class="adm-label">생명주기 상태</label>
+                    <label class="adm-label">접수 상태</label>
                     <select name="status" class="adm-input">
-                        @foreach(['upcoming' => '예정 (upcoming)', 'ended' => '종료 (ended)'] as $val => $label)
-                            <option value="{{ $val }}" @selected(old('status', $edition->status) === $val)>{{ $label }}</option>
+                        @foreach(['접수전','접수중','접수마감','대회종료','upcoming','ended'] as $s)
+                            <option value="{{ $s }}" @selected(old('status', $edition->status) === $s)>
+                                @if($s === 'upcoming') 예정 (upcoming)
+                                @elseif($s === 'ended') 종료 (ended)
+                                @else {{ $s }}
+                                @endif
+                            </option>
                         @endforeach
                     </select>
                 </div>
@@ -59,7 +102,7 @@
                            @checked(old('is_review_open', $edition->is_review_open))>
                     후기 작성 개방 (is_review_open)
                 </label>
-                <p class="adm-label-hint">ended 상태에서 후기 작성 허용. race_date 경과 시 스케줄러가 자동 true.</p>
+                <p class="adm-label-hint">종료(ended) 상태에서 후기 작성 허용. race_date 경과 시 스케줄러가 자동 true.</p>
             </div>
 
             <div class="adm-grid-2">
@@ -69,7 +112,7 @@
                 </div>
                 <div class="adm-field">
                     <label class="adm-label">도시</label>
-                    <input type="text" name="city" value="{{ old('city', $edition->city) }}" class="adm-input">
+                    <input type="text" name="city" value="{{ old('city', $edition->city ?? $race?->city) }}" class="adm-input">
                 </div>
             </div>
 
@@ -78,11 +121,11 @@
                     <label class="adm-label">국내/해외</label>
                     <div style="display:flex;gap:1.2rem;margin-top:0.5rem;">
                         <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.8rem;cursor:pointer;">
-                            <input type="radio" name="is_domestic" value="1" @checked(old('is_domestic', $edition->is_domestic) == '1' || old('is_domestic', (int)$edition->is_domestic) == 1) x-on:change="isDomestic = true">
+                            <input type="radio" name="is_domestic" value="1" @checked(old('is_domestic', $edition->is_domestic) == '1' || old('is_domestic', (int) $edition->is_domestic) == 1) x-on:change="isDomestic = true">
                             국내
                         </label>
                         <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.8rem;cursor:pointer;">
-                            <input type="radio" name="is_domestic" value="0" @checked(old('is_domestic', $edition->is_domestic) == '0' || old('is_domestic', (int)$edition->is_domestic) == 0) x-on:change="isDomestic = false">
+                            <input type="radio" name="is_domestic" value="0" @checked(old('is_domestic', $edition->is_domestic) == '0' || old('is_domestic', (int) $edition->is_domestic) == 0) x-on:change="isDomestic = false">
                             해외
                         </label>
                     </div>
@@ -95,14 +138,16 @@
 
             <div class="adm-grid-2">
                 <div class="adm-field">
-                    <label class="adm-label">참가비</label>
+                    <label class="adm-label">참가비 (원) <span class="adm-label-hint">레거시·선택</span></label>
                     <input type="text" name="entry_fee" value="{{ old('entry_fee', $edition->entry_fee) }}" class="adm-input">
                 </div>
                 <div class="adm-field">
-                    <label class="adm-label">기상청 지점코드</label>
+                    <label class="adm-label">기상청 지점코드 <span class="adm-label-hint">(비워두면 자동추론)</span></label>
                     <input type="number" name="weather_stn_id" value="{{ old('weather_stn_id', $edition->weather_stn_id) }}" class="adm-input">
                 </div>
             </div>
+
+            @include('admin.races.partials.entry-categories', ['edition' => $edition])
 
             <div class="adm-grid-2">
                 <div class="adm-field">
@@ -115,8 +160,13 @@
                 </div>
             </div>
 
+            @include('admin.races.partials.race-master-fields', ['race' => $race])
+
             <div style="display:flex;gap:0.9rem;justify-content:flex-end;margin-top:1.75rem;">
-                <a href="{{ route('admin.race-editions.index') }}" class="adm-btn adm-btn-ghost">취소</a>
+                <a href="{{ route('admin.race-editions.index') }}" class="adm-btn adm-btn-ghost">목록</a>
+                @if($race)
+                    <a href="{{ route('admin.races.index', ['q' => $race->name]) }}" class="adm-btn adm-btn-ghost">대회 검색</a>
+                @endif
                 <button type="submit" class="adm-btn adm-btn-primary">저장</button>
             </div>
         </form>

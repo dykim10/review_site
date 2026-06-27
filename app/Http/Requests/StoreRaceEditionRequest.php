@@ -13,6 +13,30 @@ class StoreRaceEditionRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'is_domestic'    => $this->boolean('is_domestic', true),
+            'is_active'      => $this->boolean('is_active', true),
+            'is_review_open' => $this->boolean('is_review_open', false),
+            'country'     => $this->input('country') ?: ($this->boolean('is_domestic', true) ? '대한민국' : null),
+            'year'        => $this->input('year') ?: ($this->input('race_date') ? date('Y', strtotime($this->input('race_date'))) : null),
+        ]);
+
+        $cats = $this->input('categories', []);
+        if (! is_array($cats)) {
+            return;
+        }
+
+        $filtered = array_values(array_filter($cats, function ($cat) {
+            return filled($cat['name'] ?? null)
+                || filled($cat['distance_km'] ?? null)
+                || filled($cat['entry_fee'] ?? null);
+        }));
+
+        $this->merge(['categories' => $filtered]);
+    }
+
     public function rules(): array
     {
         return [
@@ -34,6 +58,12 @@ class StoreRaceEditionRequest extends FormRequest
             'status'         => 'nullable|string|in:upcoming,ended,접수전,접수중,접수마감,대회종료,active',
             'is_active'      => 'boolean',
             'is_review_open' => 'boolean',
+            'organizer'      => 'nullable|string|max:255',
+            'website_url'    => 'nullable|url|max:500',
+            'categories'                 => ['nullable', 'array'],
+            'categories.*.name'          => ['required', 'string', 'max:100'],
+            'categories.*.distance_km'   => ['required', 'numeric', 'min:0', 'max:999.999'],
+            'categories.*.entry_fee'     => ['required', 'integer', 'min:0'],
         ];
     }
 
@@ -45,17 +75,12 @@ class StoreRaceEditionRequest extends FormRequest
             'year.min'               => '1990년 이후 대회만 등록 가능합니다.',
             'reg_end.after_or_equal' => '접수 종료일은 시작일 이후여야 합니다.',
             'source_url.url'         => '올바른 URL 형식을 입력해주세요.',
+            'website_url.url'        => '올바른 URL 형식을 입력해주세요.',
+            'categories.*.name.required'        => '종목 이름을 입력해 주세요.',
+            'categories.*.distance_km.required' => '거리(km)를 입력해 주세요.',
+            'categories.*.distance_km.numeric'  => '거리는 숫자로 입력해 주세요. (예: 5.5)',
+            'categories.*.entry_fee.required'   => '참가비를 입력해 주세요.',
+            'categories.*.entry_fee.integer'    => '참가비는 숫자(원)로 입력해 주세요.',
         ];
-    }
-
-    protected function prepareForValidation(): void
-    {
-        $this->merge([
-            'is_domestic'    => $this->boolean('is_domestic', true),
-            'is_active'      => $this->boolean('is_active', true),
-            'is_review_open' => $this->boolean('is_review_open', false),
-            'country'     => $this->input('country') ?: ($this->boolean('is_domestic', true) ? '대한민국' : null),
-            'year'        => $this->input('year') ?: ($this->input('race_date') ? date('Y', strtotime($this->input('race_date'))) : null),
-        ]);
     }
 }

@@ -112,7 +112,8 @@
         <div style="font-weight:700;font-size:0.95rem;margin-bottom:0.35rem;">국내 Pilot 4 — Edition 생성</div>
         <p style="margin:0 0 0.85rem;color:#6B7280;font-size:0.8rem;line-height:1.5;max-width:720px;">
             서울/대구/경주/군산 <code>race_editions</code>를 <strong>선택한 연도마다</strong> 생성합니다 (4대회 × N년).
-            날짜 우선순위: catalog → marathongo (<code>2026 서울마라톤</code> 표기, slug, 일정 검색) → 미정.
+            <strong>races</strong>는 WA sync 카탈로그(공인 대회) 행에 매칭한 뒤 edition만 붙입니다 — pilot 전용 중복 race를 새로 만들지 않습니다.
+            날짜 우선순위: catalog → marathongo → 미정.
             미정은 <a href="{{ route('admin.race-editions.index') }}" class="adm-link">edition 관리</a>에서 수동 입력.
         </p>
 
@@ -130,6 +131,9 @@
                 @foreach($pilotStatus as $ps)
                     <div>
                         {{ $ps['name'] }}
+                        @if(!empty($ps['race_name']) && $ps['race_name'] !== $ps['name'])
+                            <span class="adm-td-muted">→ {{ $ps['race_name'] }}</span>
+                        @endif
                         @if($ps['race_id'])
                             <span class="adm-td-muted">(race #{{ $ps['race_id'] }})</span>
                             — editions:
@@ -281,6 +285,25 @@
         @endif
     </div>
 
+    <div class="adm-form-card" style="margin-bottom:1.25rem;">
+        <form method="GET" action="{{ route('admin.races.index') }}" style="display:flex;flex-wrap:wrap;gap:0.75rem;align-items:flex-end;">
+            <div class="adm-field" style="margin:0;flex:1;min-width:220px;">
+                <label class="adm-label" for="race-search-q">대회 검색</label>
+                <input type="search" id="race-search-q" name="q" value="{{ request('q') }}"
+                       placeholder="대회명·영문명·도시·주최" class="adm-input" autocomplete="off">
+            </div>
+            <button type="submit" class="adm-btn adm-btn-primary">검색</button>
+            @if(request()->filled('q'))
+                <a href="{{ route('admin.races.index') }}" class="adm-btn adm-btn-ghost">초기화</a>
+            @endif
+        </form>
+        @if(request()->filled('q'))
+            <p style="margin:0.65rem 0 0;font-size:0.78rem;color:#6B7280;">
+                「{{ request('q') }}」 검색 — {{ $races->total() }}건
+            </p>
+        @endif
+    </div>
+
     <div class="adm-card">
         <table class="adm-table">
             <thead>
@@ -310,7 +333,11 @@
                             <span class="adm-badge adm-badge-gray">{{ $race->latestEdition?->status ?? '접수전' }}</span>
                         </td>
                         <td style="text-align:right;">
-                            <a href="{{ route('admin.races.edit', $race) }}" class="adm-link">수정</a>
+                            @if($race->latestEdition)
+                                <a href="{{ route('admin.race-editions.edit', $race->latestEdition) }}" class="adm-link">수정</a>
+                            @else
+                                <a href="{{ route('admin.races.edit', $race) }}" class="adm-link">수정</a>
+                            @endif
                             <form method="POST" action="{{ route('admin.races.destroy', $race) }}" style="display:inline" onsubmit="return confirm('삭제하시겠습니까?')">
                                 @csrf @method('DELETE')
                                 <button type="submit" class="adm-btn-danger" style="margin-left:0.6rem;">삭제</button>
@@ -318,7 +345,15 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="6" class="adm-td-empty">등록된 대회가 없습니다.</td></tr>
+                    <tr>
+                        <td colspan="6" class="adm-td-empty">
+                            @if(request()->filled('q'))
+                                「{{ request('q') }}」에 해당하는 대회가 없습니다.
+                            @else
+                                등록된 대회가 없습니다.
+                            @endif
+                        </td>
+                    </tr>
                 @endforelse
             </tbody>
         </table>

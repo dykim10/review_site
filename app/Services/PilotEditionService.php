@@ -39,7 +39,7 @@ class PilotEditionService
         $rows = [];
 
         foreach ($this->pilots() as $key => $pilot) {
-            $race = Race::where('name', $pilot['name'])->first();
+            $race = $this->findPilotRace($key);
             $years = $race
                 ? RaceEdition::where('race_id', $race->id)->orderBy('year')->pluck('year')->all()
                 : [];
@@ -48,6 +48,8 @@ class PilotEditionService
                 'key'           => $key,
                 'name'          => $pilot['name'],
                 'race_id'       => $race?->id,
+                'race_name'     => $race?->name,
+                'catalog_race_id' => $this->findCatalogRace($key, $pilot)?->id,
                 'edition_years' => $years,
             ];
         }
@@ -66,7 +68,7 @@ class PilotEditionService
         $rows = [];
 
         foreach ($this->pilots() as $key => $pilot) {
-            $race = Race::where('name', $pilot['name'])->first();
+            $race = $this->findPilotRace($key);
 
             foreach ($years as $year) {
                 $resolved = $dateMap[$key][$year] ?? ['race_date' => null, 'source' => 'null'];
@@ -165,6 +167,13 @@ class PilotEditionService
             throw new \InvalidArgumentException("Unknown pilot key: {$key}");
         }
 
+        if ($catalog = $this->findCatalogRace($key, $pilot)) {
+            $this->applyPilotRaceDefaults($catalog, $pilot);
+
+            return $catalog->fresh();
+        }
+
+        // WA 카탈로그에 없을 때만 pilot 전용 races 행 생성 (폴백)
         $race = Race::firstOrCreate(
             ['name' => $pilot['name']],
             [
@@ -177,15 +186,96 @@ class PilotEditionService
             ]
         );
 
-        if (! $race->wasRecentlyCreated) {
-            $race->update([
-                'city'        => $pilot['city'],
-                'is_domestic' => true,
-                'country'     => '대한민국',
-            ]);
+        $this->applyPilotRaceDefaults($race, $pilot);
+
+        return $race->fresh();
+    }
+
+    /**
+     * pilot provision 대상 races — WA sync 카탈로그 우선, 없으면 legacy pilot name.
+     */
+    public function findPilotRace(string $key): ?Race
+    {
+        $pilot = $this->pilots()[$key] ?? null;
+        if (! $pilot) {
+            return null;
         }
 
-        return $race;
+        return $this->findCatalogRace($key, $pilot)
+            ?? Race::where('name', $pilot['name'])->first();
+    }
+
+    /**
+     * WA Label sync 등으로 이미 races에 있는 국내 4대회 카탈로그 행을 찾는다.
+     * search_names·도시·wa_label 기준. (pilot name exact match는 제외 — 별도 레코드 생성 방지)
+     */
+    private function findCatalogRace(string $key, array $pilot): ?Race
+    {
+        if (! empty($pilot['catalog_race_id'])) {
+            return Race::find($pilot['catalog_race_id']);
+        }
+
+        $names = array_values(array_unique(array_filter(array_merge(
+            $pilot['search_names'] ?? [],
+        ))));
+
+        foreach ($names as $name) {
+            $race = Race::query()
+                ->where('name', 'ilike', $name)
+                ->where('country', '대한민국')
+                ->whereNotNull('wa_label')
+                ->first();
+            if ($race) {
+                return $race;
+            }
+        }
+
+        $city = $pilot['city'];
+
+        return Race::query()
+            ->where('country', '대한민국')
+            ->whereNotNull('wa_label')
+            ->where(function ($q) use ($city) {
+                $q->where('name', 'ilike', '%'.$city.'%')
+                    ->orWhere('name', 'ilike', '%'.mb_strtolower($city).'%');
+            })
+            ->orderByRaw("CASE wa_label WHEN 'platinum' THEN 1 WHEN 'gold' THEN 2 WHEN 'elite' THEN 3 ELSE 4 END")
+            ->first();
+    }
+
+    public function catalogRace(string $key): ?Race
+    {
+        $pilot = $this->pilots()[$key] ?? null;
+
+        return $pilot ? $this->findCatalogRace($key, $pilot) : null;
+    }
+
+    /** pilot config 이름으로만 만든 orphan races (#283~286 등). 카탈로그와 다를 때만 반환. */
+    public function legacyOrphanRace(string $key): ?Race
+    {
+        $pilot = $this->pilots()[$key] ?? null;
+        if (! $pilot) {
+            return null;
+        }
+
+        $legacy  = Race::where('name', $pilot['name'])->first();
+        $catalog = $this->findCatalogRace($key, $pilot);
+
+        if (! $legacy || ($catalog && $legacy->id === $catalog->id)) {
+            return null;
+        }
+
+        return $legacy;
+    }
+
+    public function applyPilotRaceDefaults(Race $race, array $pilot): void
+    {
+        $race->update([
+            'city'        => $pilot['city'],
+            'is_domestic' => true,
+            'country'     => '대한민국',
+            'is_active'   => true,
+        ]);
     }
 
     /**
@@ -198,7 +288,7 @@ class PilotEditionService
         $rows = [];
 
         foreach ($this->pilots() as $key => $pilot) {
-            $race = Race::where('name', $pilot['name'])->first();
+            $race = $this->findPilotRace($key);
             if (! $race) {
                 $rows[] = [
                     'name'   => $pilot['name'],
