@@ -172,7 +172,7 @@ npm run dev
 
 ```
 DB_CONNECTION=pgsql
-DB_HOST=aws-1-ap-southeast-1.pooler.supabase.com
+DB_HOST=aws-1-ap-northeast-2.pooler.supabase.com
 DB_PORT=5432
 DB_DATABASE=postgres
 DB_USERNAME=postgres.[project-ref]
