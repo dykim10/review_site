@@ -90,7 +90,7 @@
         <a href="{{ route('profile.edit') }}" class="action-card">
             <div class="action-card-icon">👤</div>
             <div class="action-card-title">내 프로필</div>
-            <div class="action-card-desc">계정 정보 및 비밀번호 관리</div>
+            <div class="action-card-desc">계정 정보 관리</div>
         </a>
     </div>
 

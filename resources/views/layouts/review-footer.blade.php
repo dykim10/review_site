@@ -12,7 +12,7 @@
             @auth
                 <a href="{{ route('dashboard') }}">대시보드</a>
             @endauth
-            <a href="#">개인정보처리방침</a>
+            <a href="{{ route('privacy') }}">개인정보처리방침</a>
         </nav>
     </div>
     <div class="rv-footer__copy">

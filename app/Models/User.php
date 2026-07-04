@@ -71,4 +71,13 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         $this->notify(new ResetPasswordNotification($token));
     }
+
+    /**
+     * 비밀번호 재설정 토큰 키: email 컬럼 없으므로 email_hash 를 사용한다.
+     * password_reset_tokens.email 컬럼에 hash 값이 저장된다.
+     */
+    public function getEmailForPasswordReset(): string
+    {
+        return $this->email_hash ?? '';
+    }
 }

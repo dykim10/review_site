@@ -55,7 +55,7 @@
 <div class="profile-wrap">
     <h1 class="profile-title">프로필 설정</h1>
     @include('profile.partials.update-profile-information-form')
-    @include('profile.partials.update-password-form')
+    @include('profile.partials.request-password-reset-form')
     @include('profile.partials.delete-user-form')
 </div>
 @endsection
