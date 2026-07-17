@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\RaceEdition;
+use App\Services\PilotEditionService;
 use App\Services\ReviewService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -14,13 +15,8 @@ class VerifyRemodel extends Command
 
     protected $description = 'TASK-17: REVIEW 데이터 리모델 통합 검증';
 
-    /** @var list<string> */
-    private array $pilotNames = [
-        '서울국제마라톤',
-        '대구마라톤',
-        '경주마라톤',
-        '군산 새만금 국제 마라톤',
-    ];
+    /** @var list<string> config pilot keys (일상 pilot 정책 정지 — 카탈로그 매칭으로 검증) */
+    private array $pilotKeys = ['seoul', 'daegu', 'gyeongju', 'gunsan'];
 
     /** @var list<array{check:string,pass:bool,detail:string}> */
     private array $results = [];
@@ -109,10 +105,14 @@ class VerifyRemodel extends Command
 
     private function verifyPilotSeed(): void
     {
-        $this->comment('[2] Pilot seed (TASK-16)');
+        $this->comment('[2] Pilot seed (TASK-16) — 카탈로그 4대회 edition');
 
-        foreach ($this->pilotNames as $name) {
-            $race = DB::table('review.races')->where('name', $name)->first();
+        $pilots = app(PilotEditionService::class);
+
+        foreach ($this->pilotKeys as $key) {
+            $cfg = $pilots->pilots()[$key] ?? [];
+            $label = $cfg['name'] ?? $key;
+            $race = $pilots->findPilotRace($key);
             $ed = $race
                 ? RaceEdition::where('race_id', $race->id)->where('year', 2025)->first()
                 : null;
@@ -120,14 +120,17 @@ class VerifyRemodel extends Command
                 ->where('race_edition_id', $ed->id)
                 ->whereNotNull('gpx_url')
                 ->exists();
+            $published = $race && $race->is_published;
             $this->record(
-                "pilot {$name}",
-                $ed && $ed->status === 'ended' && $ed->is_review_open && $hasGpx,
-                $ed ? "race #{$race->id}, edition #{$ed->id}" : 'missing'
+                "pilot {$label}",
+                (bool) ($ed && $ed->status === 'ended' && $ed->is_review_open && $published),
+                $ed
+                    ? "race #{$race->id}, edition #{$ed->id}, published=".(int) $published.', gpx='.($hasGpx ? 'Y' : 'N')
+                    : 'missing'
             );
         }
 
-        $upcoming = RaceEdition::where('status', 'upcoming')->whereNull('race_date')->count();
+        $upcoming = RaceEdition::where('status', 'upcoming')->count();
         $this->record('upcoming edition (feedback)', $upcoming >= 1, "count={$upcoming}");
 
         $feedback = (int) DB::table('review.edition_feedback')->count();
@@ -230,12 +233,18 @@ class VerifyRemodel extends Command
             $this->record('ended+open edition', false, 'none');
         }
 
-        $editionWithGpx = RaceEdition::query()
-            ->whereIn('race_id', function ($q) {
-                $q->select('id')->from('review.races')->whereIn('name', $this->pilotNames);
-            })
-            ->where('year', 2025)
-            ->first();
+        $pilotRaceIds = collect($this->pilotKeys)
+            ->map(fn ($key) => app(PilotEditionService::class)->findPilotRace($key)?->id)
+            ->filter()
+            ->values()
+            ->all();
+
+        $editionWithGpx = $pilotRaceIds
+            ? RaceEdition::query()
+                ->whereIn('race_id', $pilotRaceIds)
+                ->where('year', 2025)
+                ->first()
+            : null;
 
         if ($editionWithGpx) {
             $hasGpx = DB::table('review.race_courses')

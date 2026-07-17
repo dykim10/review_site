@@ -155,6 +155,9 @@ class PilotEditionService
                     'action'      => $wasExisting ? 'updated' : 'created',
                 ];
             }
+
+            // 카탈로그 races에 edition이 붙으면 공개 승격 (신규 race 중복 생성 없이)
+            $this->publishRace($race);
         }
 
         return compact('created', 'updated', 'resultRows');
@@ -215,15 +218,26 @@ class PilotEditionService
             return Race::find($pilot['catalog_race_id']);
         }
 
-        $names = array_values(array_unique(array_filter(array_merge(
-            $pilot['search_names'] ?? [],
-        ))));
+        // config 정식 명칭 exact / ilike (신규 race 중복 생성 방지)
+        $byOfficial = Race::query()
+            ->where('country', '대한민국')
+            ->where(function ($q) use ($pilot) {
+                $q->where('name', $pilot['name'])
+                    ->orWhere('name', 'ilike', $pilot['name']);
+            })
+            ->orderByRaw('CASE WHEN wa_label IS NOT NULL THEN 0 ELSE 1 END')
+            ->first();
+        if ($byOfficial) {
+            return $byOfficial;
+        }
+
+        $names = array_values(array_unique(array_filter($pilot['search_names'] ?? [])));
 
         foreach ($names as $name) {
             $race = Race::query()
                 ->where('name', 'ilike', $name)
                 ->where('country', '대한민국')
-                ->whereNotNull('wa_label')
+                ->orderByRaw('CASE WHEN wa_label IS NOT NULL THEN 0 ELSE 1 END')
                 ->first();
             if ($race) {
                 return $race;
@@ -276,6 +290,12 @@ class PilotEditionService
             'country'     => '대한민국',
             'is_active'   => true,
         ]);
+    }
+
+    /** provision 후 해당 마스터를 공개 대상으로 승격 */
+    private function publishRace(Race $race): void
+    {
+        app(RaceService::class)->publishIfHasEditions($race->fresh());
     }
 
     /**

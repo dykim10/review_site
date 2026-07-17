@@ -8,6 +8,7 @@ use App\Models\RaceEdition;
 use App\Models\RacePlan;
 use App\Models\Review;
 use App\Models\User;
+use App\Services\PilotEditionService;
 use App\Services\RacePlanService;
 use App\Services\ReviewService;
 use Illuminate\Console\Command;
@@ -41,27 +42,25 @@ class VerifyRemodelE2e extends Command
 
         $otherUser = User::query()->where('id', '!=', $user->id)->orderBy('id')->first();
 
-        $pilotNames = [
-            '서울국제마라톤',
-            '대구마라톤',
-            '경주마라톤',
-            '군산 새만금 국제 마라톤',
-        ];
-
-        foreach ($pilotNames as $name) {
-            $race = Race::where('name', $name)->first();
+        $pilotService = app(PilotEditionService::class);
+        foreach (['seoul', 'daegu', 'gyeongju', 'gunsan'] as $key) {
+            $label = $pilotService->pilots()[$key]['name'] ?? $key;
+            $race = $pilotService->findPilotRace($key);
             $edition = $race
                 ? RaceEdition::where('race_id', $race->id)->where('year', 2025)->first()
                 : null;
             if ($race && $edition) {
-                $this->checkShowPage($race->id, $edition->id, $name);
+                $this->checkShowPage($race->id, $edition->id, $label);
             } else {
-                $this->record("show {$name}", false, 'race/edition 없음');
+                $this->record("show {$label}", false, 'race/edition 없음');
             }
         }
 
-        $upcoming = RaceEdition::where('status', 'upcoming')->first();
-        $seoulRace = Race::where('name', '서울국제마라톤')->first();
+        $upcoming = RaceEdition::query()
+            ->whereHas('race', fn ($q) => $q->where('is_published', true))
+            ->where('status', 'upcoming')
+            ->first();
+        $seoulRace = $pilotService->findPilotRace('seoul');
         $ended = $seoulRace
             ? RaceEdition::where('race_id', $seoulRace->id)->where('year', 2025)->first()
             : null;
@@ -331,11 +330,12 @@ class VerifyRemodelE2e extends Command
 
     private function checkEmptyEditionShow(): void
     {
+        // edition 없는 카탈로그는 기본 비공개 → 비로그인/일반 404 (is_published 정책)
         $row = DB::selectOne("
-            SELECT r.id FROM review.races r
+            SELECT r.id, r.is_published FROM review.races r
             LEFT JOIN review.race_editions re ON re.race_id = r.id
             WHERE r.is_active = true
-            GROUP BY r.id HAVING COUNT(re.id) = 0
+            GROUP BY r.id, r.is_published HAVING COUNT(re.id) = 0
             LIMIT 1
         ");
 
@@ -346,6 +346,17 @@ class VerifyRemodelE2e extends Command
         }
 
         $status = $this->httpGet(route('races.show', $row->id));
+
+        if (! $row->is_published) {
+            $this->record(
+                'edition 없음 show',
+                $status === 404,
+                "race_id={$row->id}, unpublished→404 expected, status={$status}"
+            );
+
+            return;
+        }
+
         $kernel = app(Kernel::class);
         $request = Request::create(route('races.show', $row->id), 'GET');
         $response = $kernel->handle($request);

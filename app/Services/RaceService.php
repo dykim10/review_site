@@ -11,7 +11,7 @@ class RaceService
     // races 테이블 전용 필드
     private const RACE_FIELDS = [
         'name', 'name_en', 'city', 'organizer',
-        'website_url', 'official_url', 'is_active',
+        'website_url', 'official_url', 'is_active', 'is_published',
         'wa_label', 'is_certified', 'is_domestic', 'country',
     ];
 
@@ -61,24 +61,50 @@ class RaceService
             });
         }
 
+        $published = $filters['published'] ?? null;
+        if ($published === '1') {
+            $query->where('is_published', true);
+        } elseif ($published === '0') {
+            $query->where('is_published', false);
+        }
+
         return $query->paginate($perPage)->withQueryString();
     }
 
     /**
-     * 대회 등록 — races 마스터 생성 + race_editions 최초 인스턴스 생성
+     * 에디션이 연결된 마스터를 공개 목록·스케줄러 대상으로 승격.
+     */
+    public function publishIfHasEditions(Race $race): void
+    {
+        if ($race->is_published) {
+            return;
+        }
+
+        if (RaceEdition::where('race_id', $race->id)->exists()) {
+            $race->update(['is_published' => true]);
+        }
+    }
+
+    /**
+     * 대회 등록 — races 마스터 생성 + race_editions 최초 연도별 대회 생성
      */
     public function create(array $validated, ?string $distancesRaw = null, array $categories = []): Race
     {
         $distancesRaw = $distancesRaw ?? '';
         $raceData             = array_intersect_key($validated, array_flip(self::RACE_FIELDS));
         $raceData['distances'] = $this->parseDistances($distancesRaw);
+        if (! array_key_exists('is_published', $raceData)) {
+            $raceData['is_published'] = false;
+        }
 
         $race = Race::create($raceData);
 
         $editionData = array_intersect_key($validated, array_flip(self::EDITION_FIELDS));
-        $year = isset($editionData['race_date']) && $editionData['race_date']
-            ? \Carbon\Carbon::parse($editionData['race_date'])->year
-            : 0;
+        $year = isset($validated['year']) && $validated['year']
+            ? (int) $validated['year']
+            : (isset($editionData['race_date']) && $editionData['race_date']
+                ? \Carbon\Carbon::parse($editionData['race_date'])->year
+                : (int) date('Y'));
 
         $edition = RaceEdition::create(array_merge($editionData, [
             'race_id'     => $race->id,
@@ -94,6 +120,7 @@ class RaceService
         }
 
         $this->syncEntryCategories($edition, $categories);
+        $this->publishIfHasEditions($race->fresh());
 
         return $race->fresh();
     }
@@ -149,6 +176,8 @@ class RaceService
             $this->syncEntryCategories($edition, $categories);
         }
 
+        $this->publishIfHasEditions($race->fresh());
+
         return $race->fresh();
     }
 
@@ -165,13 +194,19 @@ class RaceService
         $race = $edition->race;
 
         if ($race) {
-            $raceData = array_intersect_key($validated, array_flip(['organizer', 'website_url', 'official_url']));
+            $raceData = array_intersect_key($validated, array_flip([
+                'organizer', 'website_url', 'official_url', 'is_published',
+                'is_domestic', 'country',
+            ]));
             $raceData['distances'] = $this->parseDistances($distancesRaw);
             if (isset($validated['name'])) {
                 $raceData['name'] = $validated['name'];
             }
             if (isset($validated['city'])) {
                 $raceData['city'] = $validated['city'];
+            }
+            if (array_key_exists('is_published', $validated)) {
+                $raceData['is_published'] = (bool) $validated['is_published'];
             }
             $race->update($raceData);
             $race->refresh();
@@ -205,6 +240,13 @@ class RaceService
         }
 
         $this->syncEntryCategories($edition, $categories);
+
+        if ($edition->race_id) {
+            $parent = $race ?? Race::find($edition->race_id);
+            if ($parent) {
+                $this->publishIfHasEditions($parent);
+            }
+        }
 
         return $edition->fresh(['entryCategories', 'race']);
     }

@@ -12,7 +12,7 @@ class Race extends Model
 
     protected $fillable = [
         'name', 'name_en', 'city', 'organizer', 'distances',
-        'website_url', 'official_url', 'is_active',
+        'website_url', 'official_url', 'is_active', 'is_published',
         'ai_race_summary', 'wa_label', 'is_certified',
         'is_domestic', 'country', 'wa_calendar',
     ];
@@ -21,6 +21,7 @@ class Race extends Model
     {
         return [
             'is_active'       => 'boolean',
+            'is_published'    => 'boolean',
             'is_certified'    => 'boolean',
             'is_domestic'     => 'boolean',
             'wa_calendar'     => 'array',
@@ -73,6 +74,11 @@ class Race extends Model
         return $query->where('is_active', true);
     }
 
+    public function scopePublished($query)
+    {
+        return $query->where('is_published', true);
+    }
+
     public function scopeByCity($query, ?string $city)
     {
         return $city ? $query->where('city', $city) : $query;
@@ -104,7 +110,7 @@ class Race extends Model
              FROM review.races r
              LEFT JOIN review.race_editions ed ON ed.race_id = r.id
              LEFT JOIN review.reviews rv ON rv.race_edition_id = ed.id
-             WHERE r.is_active = true"
+             WHERE r.is_active = true AND r.is_published = true"
         );
 
         return [
@@ -130,7 +136,7 @@ class Race extends Model
         $year       = $filters['year']        ?? null;
         $hasReview  = $filters['has_review']  ?? null;
 
-        $baseWhere = "WHERE r.is_active = true";
+        $baseWhere = "WHERE r.is_active = true AND r.is_published = true";
         $bindings  = [];
 
         if ($isDomestic !== null && $isDomestic !== '') {
@@ -240,7 +246,7 @@ class Race extends Model
             "SELECT ed.year, COUNT(*) AS cnt
              FROM review.race_editions ed
              JOIN review.races r ON r.id = ed.race_id
-             WHERE r.is_active = true AND ed.year IS NOT NULL
+             WHERE r.is_active = true AND r.is_published = true AND ed.year IS NOT NULL
              GROUP BY ed.year
              ORDER BY ed.year DESC"
         ));

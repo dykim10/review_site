@@ -13,6 +13,15 @@ class StoreRaceRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
+        $this->merge([
+            'is_published' => $this->boolean('is_published', false),
+            'is_domestic'  => $this->has('is_domestic')
+                ? $this->boolean('is_domestic')
+                : true,
+            'country' => $this->input('country')
+                ?: ($this->boolean('is_domestic', true) ? '대한민국' : null),
+        ]);
+
         $cats = $this->input('categories', []);
         if (! is_array($cats)) {
             return;
@@ -30,18 +39,23 @@ class StoreRaceRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name'        => 'required|string|max:255',
-            'race_date'   => 'nullable|date',
-            'race_time'   => 'nullable|string|max:20',
-            'location'    => 'nullable|string|max:255',
-            'city'        => 'nullable|string|max:100',
-            'organizer'   => 'nullable|string|max:255',
-            'entry_fee'   => 'nullable|integer|min:0',
-            'website_url' => 'nullable|url|max:500',
-            'reg_start'   => 'nullable|date',
-            'reg_end'     => 'nullable|date|after_or_equal:reg_start',
-            'status'         => 'nullable|string|in:접수전,접수중,접수마감,대회종료',
+            'name'           => 'required|string|max:255',
+            'year'           => 'nullable|integer|min:1990|max:2100',
+            'race_date'      => 'nullable|date',
+            'race_time'      => 'nullable|string|max:20',
+            'location'       => 'nullable|string|max:255',
+            'city'           => 'nullable|string|max:100',
+            'organizer'      => 'nullable|string|max:255',
+            'entry_fee'      => 'nullable|integer|min:0',
+            'website_url'    => 'nullable|url|max:500',
+            'reg_start'      => 'nullable|date',
+            'reg_end'        => 'nullable|date|after_or_equal:reg_start',
+            'status'         => 'nullable|string|in:접수전,접수중,접수마감,대회종료,upcoming,ended',
             'weather_stn_id' => 'nullable|integer|min:1',
+            'is_published'   => 'boolean',
+            'is_domestic'    => 'boolean',
+            'country'        => 'nullable|string|max:50',
+            'distances_raw'  => 'nullable|string|max:500',
             'categories'                 => ['nullable', 'array'],
             'categories.*.name'          => ['required', 'string', 'max:100'],
             'categories.*.distance_km'   => ['required', 'numeric', 'min:0', 'max:999.999'],
