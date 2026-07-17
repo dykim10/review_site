@@ -3,10 +3,6 @@
 @section('page-title', '연도별 대회 수정')
 
 @section('content')
-    @if(session('success'))
-        <div class="adm-alert adm-alert-success" style="margin-bottom:1rem;">{{ session('success') }}</div>
-    @endif
-
     @php
         $prefill = $clonePrefill ?? [];
         $v = function (string $key, $default = null) use ($prefill) {

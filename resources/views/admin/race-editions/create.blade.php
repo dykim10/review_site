@@ -3,10 +3,6 @@
 @section('page-title', '연도별 대회 등록')
 
 @section('content')
-    @if(session('success'))
-        <div class="adm-alert adm-alert-success" style="margin-bottom:1rem;">{{ session('success') }}</div>
-    @endif
-
     <div class="adm-form-card">
         <form method="POST" action="{{ route('admin.race-editions.store') }}" x-data="{ isDomestic: {{ old('is_domestic', '1') === '1' ? 'true' : 'false' }} }">
             @csrf
