@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AdminPasswordConfirmController;
 use App\Http\Controllers\EditionFeedbackController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RaceController;
@@ -56,8 +57,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/races/{race}/race-plan/generate', [RacePlanController::class, 'generate'])->name('race-plan.generate');
 });
 
-// 관리자 - 대회 CRUD
-Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'admin'])->group(function () {
+// 관리자 비밀번호 재확인 (admin 그룹 밖 — 재확인 미들웨어 자체 루프 방지)
+Route::middleware(['auth', 'verified', 'admin'])->group(function () {
+    Route::get('/admin-confirm', [AdminPasswordConfirmController::class, 'show'])->name('admin.password.confirm');
+    Route::post('/admin-confirm', [AdminPasswordConfirmController::class, 'store'])->name('admin.password.confirm.store');
+});
+
+// 관리자 - 대회 CRUD (로그인·이메일인증·역할·비밀번호 재확인)
+Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'admin', 'admin.password'])->group(function () {
     Route::get('/', fn () => redirect()->route('admin.races.index'))->name('home');
     Route::resource('races', AdminRaceController::class);
     Route::get('race-editions/{race_edition}/clone-next', [AdminRaceEditionController::class, 'cloneNext'])
