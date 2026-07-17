@@ -148,16 +148,45 @@ class RaceEditionController extends Controller
      */
     public function cloneNext(RaceEdition $raceEdition)
     {
+        return $this->cloneAdjacent($raceEdition, +1);
+    }
+
+    /**
+     * 이전 연도 복제 — 과거 기록 추가용. 존재하면 edit 프리필, 없으면 create 프리필.
+     */
+    public function clonePrevious(RaceEdition $raceEdition)
+    {
+        return $this->cloneAdjacent($raceEdition, -1);
+    }
+
+    /**
+     * @param  int  $yearDelta  +1 다음 연도 / -1 이전 연도
+     */
+    private function cloneAdjacent(RaceEdition $raceEdition, int $yearDelta)
+    {
         if (! $raceEdition->race_id) {
             return redirect()->route('admin.race-editions.index')
                 ->with('error', '대회(마스터)가 연결되지 않은 연도별 대회는 복제할 수 없습니다.');
         }
 
-        $nextYear = (int) $raceEdition->year + 1;
+        if (! $raceEdition->year) {
+            return redirect()->route('admin.race-editions.index')
+                ->with('error', '연도가 없는 연도별 대회는 복제할 수 없습니다.');
+        }
+
+        $targetYear = (int) $raceEdition->year + $yearDelta;
+        if ($targetYear < 1990 || $targetYear > 2100) {
+            return redirect()->route('admin.race-editions.index')
+                ->with('error', "복제 대상 연도({$targetYear})가 유효하지 않습니다.");
+        }
+
+        $directionLabel = $yearDelta > 0 ? '다음' : '이전';
+        $status = $yearDelta > 0 ? 'upcoming' : 'ended';
+
         $prefill = [
             'race_id'        => $raceEdition->race_id,
             'name'           => $raceEdition->name,
-            'year'           => $nextYear,
+            'year'           => $targetYear,
             'race_time'      => $raceEdition->race_time,
             'location'       => $raceEdition->location,
             'city'           => $raceEdition->city,
@@ -165,7 +194,7 @@ class RaceEditionController extends Controller
             'country'        => $raceEdition->country,
             'entry_fee'      => $raceEdition->entry_fee,
             'weather_stn_id' => $raceEdition->weather_stn_id,
-            'status'         => 'upcoming',
+            'status'         => $status,
             'categories'     => $raceEdition->entryCategories()
                 ->get(['name', 'distance_km', 'entry_fee'])
                 ->map(fn ($c) => [
@@ -177,21 +206,21 @@ class RaceEditionController extends Controller
         ];
 
         $existing = RaceEdition::where('race_id', $raceEdition->race_id)
-            ->where('year', $nextYear)
+            ->where('year', $targetYear)
             ->first();
 
         if ($existing) {
             return redirect()
                 ->route('admin.race-editions.edit', $existing)
                 ->with('clone_prefill', $prefill)
-                ->with('success', "{$nextYear}년 연도별 대회가 이미 있어 수정 화면으로 이동했습니다. 전년도 값으로 폼을 채웠으니 확인 후 저장하세요.");
+                ->with('success', "{$targetYear}년 연도별 대회가 이미 있어 수정 화면으로 이동했습니다. {$directionLabel} 연도 기준으로 폼을 채웠으니 확인 후 저장하세요.");
         }
 
         return redirect()
             ->route('admin.race-editions.create')
             ->withInput($prefill)
             ->with('clone_prefill', $prefill)
-            ->with('success', "{$nextYear}년 연도별 대회 등록 화면입니다. 전년도 값이 채워져 있습니다. 대회일은 새로 입력하세요.");
+            ->with('success', "{$targetYear}년 연도별 대회 등록 화면입니다. {$directionLabel} 연도 값이 채워져 있습니다. 대회일은 새로 입력하세요.");
     }
 
     /** 관리자 GPX 폼용 — 에디션 종목 → course_type 후보 */

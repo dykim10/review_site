@@ -81,7 +81,8 @@
                         <td style="text-align:center;">{{ $edition->weather_fetched_at ? '✓' : '-' }}</td>
                         <td style="text-align:right;white-space:nowrap;">
                             @if($edition->race_id)
-                                <a href="{{ route('admin.race-editions.clone-next', $edition) }}" class="adm-link">다음 연도 복제</a>
+                                <a href="{{ route('admin.race-editions.clone-previous', $edition) }}" class="adm-link">이전 연도 복제</a>
+                                <a href="{{ route('admin.race-editions.clone-next', $edition) }}" class="adm-link" style="margin-left:0.6rem;">다음 연도 복제</a>
                             @endif
                             <a href="{{ route('admin.race-editions.edit', $edition) }}" class="adm-link" style="margin-left:0.6rem;">수정</a>
                             <form method="POST" action="{{ route('admin.race-editions.destroy', $edition) }}" style="display:inline" onsubmit="return confirm('삭제하시겠습니까?')">

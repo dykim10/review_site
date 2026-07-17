@@ -69,6 +69,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'admin',
     Route::resource('races', AdminRaceController::class);
     Route::get('race-editions/{race_edition}/clone-next', [AdminRaceEditionController::class, 'cloneNext'])
         ->name('race-editions.clone-next');
+    Route::get('race-editions/{race_edition}/clone-previous', [AdminRaceEditionController::class, 'clonePrevious'])
+        ->name('race-editions.clone-previous');
     Route::get('race-editions/{race_edition}/entry-categories', [AdminRaceEditionController::class, 'entryCategoriesJson'])
         ->name('race-editions.entry-categories');
     Route::resource('race-editions', AdminRaceEditionController::class);
