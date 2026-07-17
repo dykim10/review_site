@@ -55,6 +55,8 @@ class RaceController extends Controller
 
     public function show(Race $race)
     {
+        $this->ensurePublishedOrAdmin($race);
+
         $editions      = $this->loadEditions($race);
         $latestEdition = $editions->first();
 
@@ -71,9 +73,26 @@ class RaceController extends Controller
             abort(Response::HTTP_NOT_FOUND);
         }
 
+        $this->ensurePublishedOrAdmin($race);
+
         $editions = $this->loadEditions($race);
 
         return $this->renderRaceDetail($race, $editions, $edition);
+    }
+
+    /** 미공개 대회는 404. 관리자만 미리보기 허용. */
+    private function ensurePublishedOrAdmin(Race $race): void
+    {
+        if ($race->is_published) {
+            return;
+        }
+
+        $user = auth()->user();
+        if ($user && in_array($user->role, ['super_admin', 'crew_admin'], true)) {
+            return;
+        }
+
+        abort(Response::HTTP_NOT_FOUND);
     }
 
     private function loadEditions(Race $race)
@@ -149,12 +168,17 @@ class RaceController extends Controller
             }
         }
 
+        $isUnpublishedPreview = ! $race->is_published
+            && auth()->check()
+            && in_array(auth()->user()->role, ['super_admin', 'crew_admin'], true);
+
         return view('races.show', compact(
             'race', 'reviews', 'avgRating', 'alreadyReviewed',
             'weather', 'editions', 'myReview', 'latestEdition',
             'youtubeItems', 'instagramItems', 'feedbacks', 'hasOfficialGpx',
             'coursesForMap', 'hasCourseMap',
             'coursesForElevation', 'hasElevationProfile',
+            'isUnpublishedPreview',
         ));
     }
 }

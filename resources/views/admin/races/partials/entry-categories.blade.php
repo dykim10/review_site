@@ -1,5 +1,8 @@
 @php
     $initialRows = old('categories');
+    if ($initialRows === null && is_array(session('clone_prefill.categories') ?? null)) {
+        $initialRows = session('clone_prefill.categories');
+    }
     if ($initialRows === null && isset($edition) && $edition) {
         $initialRows = $edition->entryCategories->map(fn ($c) => [
             'name'        => $c->name,

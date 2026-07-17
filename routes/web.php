@@ -60,6 +60,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'admin'])->group(function () {
     Route::get('/', fn () => redirect()->route('admin.races.index'))->name('home');
     Route::resource('races', AdminRaceController::class);
+    Route::get('race-editions/{race_edition}/clone-next', [AdminRaceEditionController::class, 'cloneNext'])
+        ->name('race-editions.clone-next');
+    Route::get('race-editions/{race_edition}/entry-categories', [AdminRaceEditionController::class, 'entryCategoriesJson'])
+        ->name('race-editions.entry-categories');
     Route::resource('race-editions', AdminRaceEditionController::class);
     Route::resource('race-courses', AdminRaceCourseController::class)->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
 

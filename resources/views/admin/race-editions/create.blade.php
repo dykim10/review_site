@@ -1,22 +1,27 @@
 @extends('layouts.admin')
-@section('title', '대회 인스턴스 등록 — PAC-RUN Admin')
-@section('page-title', '대회 인스턴스 등록')
+@section('title', '연도별 대회 등록 — PAC-RUN Admin')
+@section('page-title', '연도별 대회 등록')
 
 @section('content')
+    @if(session('success'))
+        <div class="adm-alert adm-alert-success" style="margin-bottom:1rem;">{{ session('success') }}</div>
+    @endif
+
     <div class="adm-form-card">
-        <form method="POST" action="{{ route('admin.race-editions.store') }}" x-data="{ isDomestic: true }">
+        <form method="POST" action="{{ route('admin.race-editions.store') }}" x-data="{ isDomestic: {{ old('is_domestic', '1') === '1' ? 'true' : 'false' }} }">
             @csrf
 
             <div class="adm-field">
-                <label class="adm-label">원본 대회 연결 <span class="adm-label-hint">(선택 — 비워두면 독립)</span></label>
-                <select name="race_id" class="adm-input">
-                    <option value="">연결 안 함</option>
+                <label class="adm-label">대회(마스터) <span style="color:#DC2626;">*</span></label>
+                <select name="race_id" required class="adm-input">
+                    <option value="">선택하세요</option>
                     @foreach($races as $race)
                         <option value="{{ $race->id }}" @selected(old('race_id') == $race->id)>
                             {{ $race->name }}{{ $race->latestEdition ? ' ('.$race->latestEdition->year.')' : '' }}
                         </option>
                     @endforeach
                 </select>
+                @error('race_id')<p class="adm-field-error">{{ $message }}</p>@enderror
             </div>
 
             <div class="adm-field">
@@ -29,10 +34,11 @@
                 <div class="adm-field">
                     <label class="adm-label">대회일</label>
                     <input type="date" name="race_date" value="{{ old('race_date') }}" class="adm-input">
+                    <p style="font-size:0.72rem;color:#9CA3AF;margin-top:0.35rem;">전년도 복제 시 비워 둡니다. 새로 입력하세요.</p>
                 </div>
                 <div class="adm-field">
                     <label class="adm-label">개최 연도 <span style="color:#DC2626;">*</span></label>
-                    <input type="number" name="year" value="{{ old('year') }}" required min="1990" max="2100" placeholder="예: 2024" class="adm-input">
+                    <input type="number" name="year" value="{{ old('year') }}" required min="1990" max="2100" placeholder="예: 2026" class="adm-input">
                     @error('year')<p class="adm-field-error">{{ $message }}</p>@enderror
                 </div>
             </div>
@@ -45,8 +51,8 @@
                 <div class="adm-field">
                     <label class="adm-label">상태</label>
                     <select name="status" class="adm-input">
-                        @foreach(['접수전','접수중','접수마감','대회종료'] as $s)
-                            <option value="{{ $s }}" @selected(old('status', '접수전') === $s)>{{ $s }}</option>
+                        @foreach(['upcoming' => '예정 (upcoming)', 'ended' => '종료 (ended)', '접수전' => '접수전', '접수중' => '접수중', '접수마감' => '접수마감'] as $val => $label)
+                            <option value="{{ $val }}" @selected(old('status', 'upcoming') === $val)>{{ $label }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -77,22 +83,23 @@
                         </label>
                     </div>
                 </div>
-                <div style="flex:1;display:none;" x-show="!isDomestic">
+                <div style="flex:1;" x-show="!isDomestic">
                     <label class="adm-label">국가</label>
                     <input type="text" name="country" value="{{ old('country') }}" placeholder="예: 일본, 미국" class="adm-input">
                 </div>
             </div>
 
-            <div class="adm-grid-2">
-                <div class="adm-field">
-                    <label class="adm-label">참가비</label>
-                    <input type="text" name="entry_fee" value="{{ old('entry_fee') }}" placeholder="예: 50,000원" class="adm-input">
-                </div>
-                <div class="adm-field">
-                    <label class="adm-label">기상청 지점코드</label>
-                    <input type="number" name="weather_stn_id" value="{{ old('weather_stn_id') }}" placeholder="예: 108" class="adm-input">
-                </div>
+            <div class="adm-field">
+                <label class="adm-label">참가비 (원) <span class="adm-label-hint">레거시·선택</span></label>
+                <input type="text" name="entry_fee" value="{{ old('entry_fee') }}" class="adm-input">
             </div>
+
+            @include('admin.partials.weather-stn-select', [
+                'weatherStations' => $weatherStations,
+                'selectedStnId' => old('weather_stn_id'),
+            ])
+
+            @include('admin.races.partials.entry-categories', ['edition' => null])
 
             <div class="adm-grid-2">
                 <div class="adm-field">

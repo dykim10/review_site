@@ -1,11 +1,11 @@
 @extends('layouts.admin')
-@section('title', '대회 인스턴스 관리 — PAC-RUN Admin')
-@section('page-title', '대회 인스턴스 관리')
+@section('title', '연도별 대회 관리 — PAC-RUN Admin')
+@section('page-title', '연도별 대회 관리')
 
 @section('topbar-action')
     <a href="{{ route('admin.race-editions.create') }}" class="adm-btn adm-btn-primary">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        인스턴스 등록
+        연도별 대회 등록
     </a>
 @endsection
 
@@ -79,8 +79,11 @@
                         <td><span class="adm-badge adm-badge-gray">{{ $edition->status ?? '접수전' }}</span></td>
                         <td style="text-align:center;color:#9CA3AF;">{{ $edition->review_count ?? 0 }}</td>
                         <td style="text-align:center;">{{ $edition->weather_fetched_at ? '✓' : '-' }}</td>
-                        <td style="text-align:right;">
-                            <a href="{{ route('admin.race-editions.edit', $edition) }}" class="adm-link">수정</a>
+                        <td style="text-align:right;white-space:nowrap;">
+                            @if($edition->race_id)
+                                <a href="{{ route('admin.race-editions.clone-next', $edition) }}" class="adm-link">다음 연도 복제</a>
+                            @endif
+                            <a href="{{ route('admin.race-editions.edit', $edition) }}" class="adm-link" style="margin-left:0.6rem;">수정</a>
                             <form method="POST" action="{{ route('admin.race-editions.destroy', $edition) }}" style="display:inline" onsubmit="return confirm('삭제하시겠습니까?')">
                                 @csrf @method('DELETE')
                                 <button type="submit" class="adm-btn-danger" style="margin-left:0.6rem;">삭제</button>
@@ -88,7 +91,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="9" class="adm-td-empty">등록된 인스턴스가 없습니다.</td></tr>
+                    <tr><td colspan="9" class="adm-td-empty">등록된 연도별 대회가 없습니다.</td></tr>
                 @endforelse
             </tbody>
         </table>

@@ -19,6 +19,7 @@ class UpdateEditionStatus extends Command
         $now    = Carbon::now();
 
         $toEnd = RaceEdition::query()
+            ->whereHas('race', fn ($q) => $q->where('is_published', true))
             ->whereNotNull('race_date')
             ->whereDate('race_date', '<', $today)
             ->where('status', '!=', 'ended');

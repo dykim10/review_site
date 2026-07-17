@@ -120,6 +120,7 @@ class RaceEdition extends Model
         $city       = $filters['city']        ?? null;
 
         $where = "WHERE re.is_active = true AND re.race_date >= CURRENT_DATE"
+            . " AND r.is_published = true"
             . ($isDomestic !== null ? ' AND re.is_domestic = :is_domestic' : '')
             . ($year       ? ' AND re.year = :year'                        : '')
             . ($city       ? ' AND re.city = :city'                        : '');
@@ -136,7 +137,10 @@ class RaceEdition extends Model
         }
 
         $total = DB::selectOne(
-            "SELECT COUNT(*) AS cnt FROM review.race_editions re $where",
+            "SELECT COUNT(*) AS cnt
+             FROM review.race_editions re
+             INNER JOIN review.races r ON r.id = re.race_id
+             $where",
             $bindings
         )->cnt;
 
@@ -146,7 +150,7 @@ class RaceEdition extends Model
                     COUNT(rv.id) AS review_count,
                     ROUND(AVG(rv.rating)::numeric, 1) AS avg_rating
              FROM review.race_editions re
-             LEFT JOIN review.races r   ON r.id = re.race_id
+             INNER JOIN review.races r   ON r.id = re.race_id
              LEFT JOIN review.reviews rv ON rv.race_edition_id = re.id
              $where
              GROUP BY re.id, r.wa_label, r.is_certified

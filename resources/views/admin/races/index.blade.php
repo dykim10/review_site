@@ -292,14 +292,22 @@
                 <input type="search" id="race-search-q" name="q" value="{{ request('q') }}"
                        placeholder="대회명·영문명·도시·주최" class="adm-input" autocomplete="off">
             </div>
+            <div class="adm-field" style="margin:0;min-width:140px;">
+                <label class="adm-label" for="race-published">공개 여부</label>
+                <select id="race-published" name="published" class="adm-input" onchange="this.form.submit()">
+                    <option value="">전체</option>
+                    <option value="1" @selected(request('published') === '1')>공개</option>
+                    <option value="0" @selected(request('published') === '0')>비공개</option>
+                </select>
+            </div>
             <button type="submit" class="adm-btn adm-btn-primary">검색</button>
-            @if(request()->filled('q'))
+            @if(request()->filled('q') || request()->filled('published'))
                 <a href="{{ route('admin.races.index') }}" class="adm-btn adm-btn-ghost">초기화</a>
             @endif
         </form>
-        @if(request()->filled('q'))
+        @if(request()->filled('q') || request()->filled('published'))
             <p style="margin:0.65rem 0 0;font-size:0.78rem;color:#6B7280;">
-                「{{ request('q') }}」 검색 — {{ $races->total() }}건
+                필터 결과 — {{ $races->total() }}건
             </p>
         @endif
     </div>
@@ -312,6 +320,7 @@
                     <th>대회일</th>
                     <th>도시</th>
                     <th>국내/해외</th>
+                    <th>공개</th>
                     <th>상태</th>
                     <th></th>
                 </tr>
@@ -330,6 +339,13 @@
                             </span>
                         </td>
                         <td>
+                            @if($race->is_published)
+                                <span class="adm-badge adm-badge-green">공개</span>
+                            @else
+                                <span class="adm-badge adm-badge-gray">비공개</span>
+                            @endif
+                        </td>
+                        <td>
                             <span class="adm-badge adm-badge-gray">{{ $race->latestEdition?->status ?? '접수전' }}</span>
                         </td>
                         <td style="text-align:right;">
@@ -346,9 +362,9 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="6" class="adm-td-empty">
-                            @if(request()->filled('q'))
-                                「{{ request('q') }}」에 해당하는 대회가 없습니다.
+                        <td colspan="7" class="adm-td-empty">
+                            @if(request()->filled('q') || request()->filled('published'))
+                                조건에 해당하는 대회가 없습니다.
                             @else
                                 등록된 대회가 없습니다.
                             @endif

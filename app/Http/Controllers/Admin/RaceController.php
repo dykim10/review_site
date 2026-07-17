@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreRaceRequest;
 use App\Models\Race;
+use App\Models\WeatherStation;
 use App\Services\PilotEditionService;
 use App\Services\RaceService;
 use App\Services\WaLabelSyncService;
@@ -16,7 +17,7 @@ class RaceController extends Controller
 
     public function index(PilotEditionService $pilotEditions)
     {
-        $races = $this->raceService->getAdminList(request()->only('q'));
+        $races = $this->raceService->getAdminList(request()->only('q', 'published'));
         $waSyncStatuses = collect([2026, 2025, 2024, 2023, 2022])
             ->mapWithKeys(fn (int $y) => [$y => Cache::get(WaLabelSyncService::cacheKey($y))])
             ->filter();
@@ -28,7 +29,9 @@ class RaceController extends Controller
 
     public function create()
     {
-        return view('admin.races.create');
+        $weatherStations = WeatherStation::optionsForSelect();
+
+        return view('admin.races.create', compact('weatherStations'));
     }
 
     public function store(StoreRaceRequest $request)
@@ -50,7 +53,9 @@ class RaceController extends Controller
             return redirect()->route('admin.race-editions.edit', $race->latestEdition);
         }
 
-        return view('admin.races.edit', compact('race'));
+        $weatherStations = WeatherStation::optionsForSelect();
+
+        return view('admin.races.edit', compact('race', 'weatherStations'));
     }
 
     public function update(StoreRaceRequest $request, Race $race)

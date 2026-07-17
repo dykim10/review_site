@@ -351,6 +351,9 @@
         <div class="hero-top">
             <div class="hero-left">
                 <div class="status-row">
+                    @if(!empty($isUnpublishedPreview))
+                        <span class="badge b-closed">미공개 대회</span>
+                    @endif
                     <span class="badge {{ $statusClass }}">{{ $latestEdition?->status ?? '접수전' }}</span>
                     @if($waLabelClass)
                         <span class="badge {{ $waLabelClass }}">{{ $waLabelText }}</span>
