@@ -27,6 +27,6 @@ class AdminPasswordConfirmController extends Controller
 
         session(['admin_password_confirmed_at' => now()->timestamp]);
 
-        return redirect()->intended(route('admin.home'));
+        return redirect()->intended('/admin');
     }
 }

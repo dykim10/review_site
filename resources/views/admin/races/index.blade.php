@@ -3,7 +3,7 @@
 @section('page-title', '대회 관리')
 
 @section('topbar-action')
-    <a href="{{ route('admin.races.create') }}" class="adm-btn adm-btn-primary">
+    <a href="{{ route('races-admin.races.create') }}" class="adm-btn adm-btn-primary">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         대회 등록
     </a>
@@ -22,7 +22,7 @@
             </div>
         </div>
 
-        <form method="POST" action="{{ route('admin.wa-label.sync') }}" id="wa-sync-form" style="margin-top:1.1rem;display:flex;flex-wrap:wrap;align-items:flex-end;gap:0.75rem;">
+        <form method="POST" action="{{ route('races-admin.wa-label.sync') }}" id="wa-sync-form" style="margin-top:1.1rem;display:flex;flex-wrap:wrap;align-items:flex-end;gap:0.75rem;">
             @csrf
             <div class="adm-field" style="margin:0;min-width:120px;">
                 <label class="adm-label" for="wa-year">시즌 (season)</label>
@@ -82,7 +82,7 @@
                             @endif
                         </span>
                         @if(in_array($status, ['running', 'cancelling'], true))
-                            <form method="POST" action="{{ route('admin.wa-label.cancel') }}" style="display:inline;margin:0;"
+                            <form method="POST" action="{{ route('races-admin.wa-label.cancel') }}" style="display:inline;margin:0;"
                                   onsubmit="return confirm('{{ $y }} 시즌 동기화를 중지하고, 이번 세션에서 변경한 DB 내용을 롤백합니다. 계속할까요?')">
                                 @csrf
                                 <input type="hidden" name="year" value="{{ $y }}">
@@ -98,7 +98,7 @@
             EC2 SSH: <code>php artisan review:wa-label-sync 2024</code> (nginx 타임아웃 없음). 번역·주최 URL은 체크박스 또는 <code>--translate --organiser</code>.
         </p>
 
-        <form method="POST" action="{{ route('admin.wa-label.preview') }}" style="margin-top:0.75rem;display:inline;">
+        <form method="POST" action="{{ route('races-admin.wa-label.preview') }}" style="margin-top:0.75rem;display:inline;">
             @csrf
             <input type="hidden" name="year" id="wa-preview-year" value="{{ date('Y') }}">
             <button type="submit" class="adm-btn adm-btn-ghost" onclick="document.getElementById('wa-preview-year').value=document.getElementById('wa-year').value">
@@ -114,7 +114,7 @@
             서울/대구/경주/군산 <code>race_editions</code>를 <strong>선택한 연도마다</strong> 생성합니다 (4대회 × N년).
             <strong>races</strong>는 WA sync 카탈로그(공인 대회) 행에 매칭한 뒤 edition만 붙입니다 — pilot 전용 중복 race를 새로 만들지 않습니다.
             날짜 우선순위: catalog → marathongo → 미정.
-            미정은 <a href="{{ route('admin.race-editions.index') }}" class="adm-link">edition 관리</a>에서 수동 입력.
+            미정은 <a href="{{ route('races-admin.race-editions.index') }}" class="adm-link">edition 관리</a>에서 수동 입력.
         </p>
 
         @if(!empty($pilotCatalog))
@@ -155,7 +155,7 @@
             $defaultPilotYears = [(int) date('Y'), (int) date('Y') - 1];
         @endphp
 
-        <form method="POST" action="{{ route('admin.pilot-editions.preview') }}" id="pilot-edition-form" style="display:flex;flex-wrap:wrap;gap:0.75rem;align-items:flex-end;">
+        <form method="POST" action="{{ route('races-admin.pilot-editions.preview') }}" id="pilot-edition-form" style="display:flex;flex-wrap:wrap;gap:0.75rem;align-items:flex-end;">
             @csrf
             <div class="adm-field" style="margin:0;">
                 <span class="adm-label">생성할 연도 (복수 선택)</span>
@@ -174,7 +174,7 @@
                 catalog 없는 연도 marathongo 날짜 조회
             </label>
             <button type="submit" class="adm-btn adm-btn-ghost">미리보기</button>
-            <button type="submit" formaction="{{ route('admin.pilot-editions.provision') }}" class="adm-btn adm-btn-primary"
+            <button type="submit" formaction="{{ route('races-admin.pilot-editions.provision') }}" class="adm-btn adm-btn-primary"
                     onclick="return confirm('선택 연도의 pilot edition 4개×N년을 생성/갱신합니다. 계속할까요?')">
                 Edition 생성
             </button>
@@ -233,7 +233,7 @@
                     </tbody>
                 </table>
                 <p style="margin:0.5rem 0 0;font-size:0.75rem;color:#6B7280;">
-                    미정 날짜는 <a href="{{ route('admin.race-editions.index') }}" class="adm-link">edition 관리</a>에서 수동 입력.
+                    미정 날짜는 <a href="{{ route('races-admin.race-editions.index') }}" class="adm-link">edition 관리</a>에서 수동 입력.
                 </p>
             </div>
         @endif
@@ -247,7 +247,7 @@
             <strong>종료(ended)</strong> pilot edition 4개에 FULL 코스 GPX URL 스텁을 등록합니다.
             (날짜가 catalog에 있어 ended인 연도만 — 예: 2025)
         </p>
-        <form method="POST" action="{{ route('admin.pilot-editions.attach-gpx') }}" style="display:flex;flex-wrap:wrap;gap:0.75rem;align-items:flex-end;">
+        <form method="POST" action="{{ route('races-admin.pilot-editions.attach-gpx') }}" style="display:flex;flex-wrap:wrap;gap:0.75rem;align-items:flex-end;">
             @csrf
             <div class="adm-field" style="margin:0;min-width:120px;">
                 <label class="adm-label" for="pilot-gpx-year">GPX 등록 연도</label>
@@ -286,7 +286,7 @@
     </div>
 
     <div class="adm-form-card" style="margin-bottom:1.25rem;">
-        <form method="GET" action="{{ route('admin.races.index') }}" style="display:flex;flex-wrap:wrap;gap:0.75rem;align-items:flex-end;">
+        <form method="GET" action="{{ route('races-admin.races.index') }}" style="display:flex;flex-wrap:wrap;gap:0.75rem;align-items:flex-end;">
             <div class="adm-field" style="margin:0;flex:1;min-width:220px;">
                 <label class="adm-label" for="race-search-q">대회 검색</label>
                 <input type="search" id="race-search-q" name="q" value="{{ request('q') }}"
@@ -302,7 +302,7 @@
             </div>
             <button type="submit" class="adm-btn adm-btn-primary">검색</button>
             @if(request()->filled('q') || request()->filled('published'))
-                <a href="{{ route('admin.races.index') }}" class="adm-btn adm-btn-ghost">초기화</a>
+                <a href="{{ route('races-admin.races.index') }}" class="adm-btn adm-btn-ghost">초기화</a>
             @endif
         </form>
         @if(request()->filled('q') || request()->filled('published'))
@@ -350,11 +350,11 @@
                         </td>
                         <td style="text-align:right;">
                             @if($race->latestEdition)
-                                <a href="{{ route('admin.race-editions.edit', $race->latestEdition) }}" class="adm-link">수정</a>
+                                <a href="{{ route('races-admin.race-editions.edit', $race->latestEdition) }}" class="adm-link">수정</a>
                             @else
-                                <a href="{{ route('admin.races.edit', $race) }}" class="adm-link">수정</a>
+                                <a href="{{ route('races-admin.races.edit', $race) }}" class="adm-link">수정</a>
                             @endif
-                            <form method="POST" action="{{ route('admin.races.destroy', $race) }}" style="display:inline" onsubmit="return confirm('삭제하시겠습니까?')">
+                            <form method="POST" action="{{ route('races-admin.races.destroy', $race) }}" style="display:inline" onsubmit="return confirm('삭제하시겠습니까?')">
                                 @csrf @method('DELETE')
                                 <button type="submit" class="adm-btn-danger" style="margin-left:0.6rem;">삭제</button>
                             </form>

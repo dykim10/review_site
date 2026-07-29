@@ -42,7 +42,7 @@ class RaceController extends Controller
             $request->input('categories', []) ?? [],
         );
 
-        return redirect()->route('admin.races.index')->with('success', '대회가 등록되었습니다.');
+        return redirect()->route('races-admin.races.index')->with('success', '대회가 등록되었습니다.');
     }
 
     public function edit(Race $race)
@@ -50,7 +50,7 @@ class RaceController extends Controller
         $race->load(['latestEdition.entryCategories', 'editions']);
 
         if ($race->latestEdition) {
-            return redirect()->route('admin.race-editions.edit', $race->latestEdition);
+            return redirect()->route('races-admin.race-editions.edit', $race->latestEdition);
         }
 
         $weatherStations = WeatherStation::optionsForSelect();
@@ -66,12 +66,12 @@ class RaceController extends Controller
             (string) ($request->input('distances_raw') ?? ''),
             $request->input('categories', []) ?? [],
         );
-        return redirect()->route('admin.races.index')->with('success', '대회 정보가 수정되었습니다.');
+        return redirect()->route('races-admin.races.index')->with('success', '대회 정보가 수정되었습니다.');
     }
 
     public function destroy(Race $race)
     {
         $this->raceService->delete($race);
-        return redirect()->route('admin.races.index')->with('success', '대회가 삭제되었습니다.');
+        return redirect()->route('races-admin.races.index')->with('success', '대회가 삭제되었습니다.');
     }
 }

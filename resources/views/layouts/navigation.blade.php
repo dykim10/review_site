@@ -14,7 +14,7 @@
                class="h-link {{ request()->routeIs('profile.*') ? 'h-link-active' : '' }}">프로필</a>
 
             @if(in_array(auth()->user()->role ?? '', ['super_admin', 'region_admin']))
-                <a href="{{ route('admin.races.index') }}" class="h-link h-link-admin">관리자</a>
+                <a href="{{ route('races-admin.races.index') }}" class="h-link h-link-admin">관리자</a>
             @endif
 
             <form method="POST" action="{{ route('logout') }}" style="display:inline">

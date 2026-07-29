@@ -57,15 +57,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/races/{race}/race-plan/generate', [RacePlanController::class, 'generate'])->name('race-plan.generate');
 });
 
-// 관리자 비밀번호 재확인 (admin 그룹 밖 — 재확인 미들웨어 자체 루프 방지)
+// 관리자 비밀번호 재확인 + Filament 접근 거부 안내 (Filament /admin 밖)
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/admin-forbidden', fn () => view('admin.forbidden'))->name('admin.forbidden');
+});
+
 Route::middleware(['auth', 'verified', 'admin'])->group(function () {
     Route::get('/admin-confirm', [AdminPasswordConfirmController::class, 'show'])->name('admin.password.confirm');
     Route::post('/admin-confirm', [AdminPasswordConfirmController::class, 'store'])->name('admin.password.confirm.store');
 });
 
-// 관리자 - 대회 CRUD (로그인·이메일인증·역할·비밀번호 재확인)
-Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'admin', 'admin.password'])->group(function () {
-    Route::get('/', fn () => redirect()->route('admin.races.index'))->name('home');
+// 손제작 대회관리 — Filament /admin 과 경로 분리 (병행 이관)
+Route::prefix('races-admin')->name('races-admin.')->middleware(['auth', 'verified', 'admin', 'admin.password'])->group(function () {
+    Route::get('/', fn () => redirect()->route('races-admin.races.index'))->name('home');
     Route::resource('races', AdminRaceController::class);
     Route::get('race-editions/{race_edition}/clone-next', [AdminRaceEditionController::class, 'cloneNext'])
         ->name('race-editions.clone-next');

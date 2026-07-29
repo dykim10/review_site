@@ -65,7 +65,7 @@ class RaceCourseController extends Controller
             $flash['warning'] = '고저도 프로파일 생성에 실패했습니다. GPX는 저장되었으며 나중에 재업로드할 수 있습니다.';
         }
 
-        return redirect()->route('admin.race-courses.index')->with($flash);
+        return redirect()->route('races-admin.race-courses.index')->with($flash);
     }
 
     public function edit(RaceCourse $raceCourse)
@@ -107,14 +107,14 @@ class RaceCourseController extends Controller
             $flash['warning'] = '고저도 프로파일 생성에 실패했습니다. GPX는 저장되었습니다.';
         }
 
-        return redirect()->route('admin.race-courses.index')->with($flash);
+        return redirect()->route('races-admin.race-courses.index')->with($flash);
     }
 
     public function destroy(RaceCourse $raceCourse)
     {
         $this->service->delete($raceCourse);
 
-        return redirect()->route('admin.race-courses.index')
+        return redirect()->route('races-admin.race-courses.index')
             ->with('success', 'GPX 코스가 삭제되었습니다.');
     }
 }

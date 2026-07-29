@@ -4,7 +4,7 @@
 
 @section('content')
     <div class="adm-form-card">
-        <form method="POST" action="{{ route('admin.races.update', $race) }}">
+        <form method="POST" action="{{ route('races-admin.races.update', $race) }}">
             @csrf @method('PUT')
 
             <div class="adm-field">
@@ -85,7 +85,7 @@
             </div>
 
             <div style="display:flex;gap:0.9rem;justify-content:flex-end;margin-top:1.75rem;">
-                <a href="{{ route('admin.races.index') }}" class="adm-btn adm-btn-ghost">취소</a>
+                <a href="{{ route('races-admin.races.index') }}" class="adm-btn adm-btn-ghost">취소</a>
                 <button type="submit" class="adm-btn adm-btn-primary">저장</button>
             </div>
         </form>

@@ -87,7 +87,7 @@ class RaceEditionController extends Controller
             }
         }
 
-        return redirect()->route('admin.race-editions.edit', $edition)
+        return redirect()->route('races-admin.race-editions.edit', $edition)
             ->with('success', '연도별 대회가 등록되었습니다.');
     }
 
@@ -131,7 +131,7 @@ class RaceEditionController extends Controller
             throw $e;
         }
 
-        return redirect()->route('admin.race-editions.edit', $raceEdition)
+        return redirect()->route('races-admin.race-editions.edit', $raceEdition)
             ->with('success', '대회 정보가 저장되었습니다.');
     }
 
@@ -139,7 +139,7 @@ class RaceEditionController extends Controller
     {
         $this->service->delete($raceEdition);
 
-        return redirect()->route('admin.race-editions.index')
+        return redirect()->route('races-admin.race-editions.index')
             ->with('success', '연도별 대회가 삭제되었습니다.');
     }
 
@@ -165,18 +165,18 @@ class RaceEditionController extends Controller
     private function cloneAdjacent(RaceEdition $raceEdition, int $yearDelta)
     {
         if (! $raceEdition->race_id) {
-            return redirect()->route('admin.race-editions.index')
+            return redirect()->route('races-admin.race-editions.index')
                 ->with('error', '대회(마스터)가 연결되지 않은 연도별 대회는 복제할 수 없습니다.');
         }
 
         if (! $raceEdition->year) {
-            return redirect()->route('admin.race-editions.index')
+            return redirect()->route('races-admin.race-editions.index')
                 ->with('error', '연도가 없는 연도별 대회는 복제할 수 없습니다.');
         }
 
         $targetYear = (int) $raceEdition->year + $yearDelta;
         if ($targetYear < 1990 || $targetYear > 2100) {
-            return redirect()->route('admin.race-editions.index')
+            return redirect()->route('races-admin.race-editions.index')
                 ->with('error', "복제 대상 연도({$targetYear})가 유효하지 않습니다.");
         }
 
@@ -211,13 +211,13 @@ class RaceEditionController extends Controller
 
         if ($existing) {
             return redirect()
-                ->route('admin.race-editions.edit', $existing)
+                ->route('races-admin.race-editions.edit', $existing)
                 ->with('clone_prefill', $prefill)
                 ->with('success', "{$targetYear}년 연도별 대회가 이미 있어 수정 화면으로 이동했습니다. {$directionLabel} 연도 기준으로 폼을 채웠으니 확인 후 저장하세요.");
         }
 
         return redirect()
-            ->route('admin.race-editions.create')
+            ->route('races-admin.race-editions.create')
             ->withInput($prefill)
             ->with('clone_prefill', $prefill)
             ->with('success', "{$targetYear}년 연도별 대회 등록 화면입니다. {$directionLabel} 연도 값이 채워져 있습니다. 대회일은 새로 입력하세요.");

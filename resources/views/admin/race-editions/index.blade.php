@@ -3,7 +3,7 @@
 @section('page-title', '연도별 대회 관리')
 
 @section('topbar-action')
-    <a href="{{ route('admin.race-editions.create') }}" class="adm-btn adm-btn-primary">
+    <a href="{{ route('races-admin.race-editions.create') }}" class="adm-btn adm-btn-primary">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         연도별 대회 등록
     </a>
@@ -11,7 +11,7 @@
 
 @section('content')
     <div style="background:#fff;border:1px solid #E5E7EB;border-radius:10px;padding:1.2rem;margin-bottom:1.5rem;">
-        <form method="GET" action="{{ route('admin.race-editions.index') }}">
+        <form method="GET" action="{{ route('races-admin.race-editions.index') }}">
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0.8rem;align-items:flex-end;">
             <div>
                 <label class="adm-label">국내/해외</label>
@@ -39,7 +39,7 @@
             </div>
             @if(request()->hasAny(['q', 'year', 'is_domestic']))
             <div>
-                <a href="{{ route('admin.race-editions.index') }}" class="adm-btn adm-btn-ghost" style="width:100%;display:block;text-align:center;">초기화</a>
+                <a href="{{ route('races-admin.race-editions.index') }}" class="adm-btn adm-btn-ghost" style="width:100%;display:block;text-align:center;">초기화</a>
             </div>
             @endif
         </div>
@@ -81,11 +81,11 @@
                         <td style="text-align:center;">{{ $edition->weather_fetched_at ? '✓' : '-' }}</td>
                         <td style="text-align:right;white-space:nowrap;">
                             @if($edition->race_id)
-                                <a href="{{ route('admin.race-editions.clone-previous', $edition) }}" class="adm-link">이전 연도 복제</a>
-                                <a href="{{ route('admin.race-editions.clone-next', $edition) }}" class="adm-link" style="margin-left:0.6rem;">다음 연도 복제</a>
+                                <a href="{{ route('races-admin.race-editions.clone-previous', $edition) }}" class="adm-link">이전 연도 복제</a>
+                                <a href="{{ route('races-admin.race-editions.clone-next', $edition) }}" class="adm-link" style="margin-left:0.6rem;">다음 연도 복제</a>
                             @endif
-                            <a href="{{ route('admin.race-editions.edit', $edition) }}" class="adm-link" style="margin-left:0.6rem;">수정</a>
-                            <form method="POST" action="{{ route('admin.race-editions.destroy', $edition) }}" style="display:inline" onsubmit="return confirm('삭제하시겠습니까?')">
+                            <a href="{{ route('races-admin.race-editions.edit', $edition) }}" class="adm-link" style="margin-left:0.6rem;">수정</a>
+                            <form method="POST" action="{{ route('races-admin.race-editions.destroy', $edition) }}" style="display:inline" onsubmit="return confirm('삭제하시겠습니까?')">
                                 @csrf @method('DELETE')
                                 <button type="submit" class="adm-btn-danger" style="margin-left:0.6rem;">삭제</button>
                             </form>

@@ -17,7 +17,7 @@
                 </a>
             @endauth
             @if(auth()->check() && in_array(auth()->user()->role ?? '', ['super_admin', 'region_admin']))
-                <a href="{{ route('admin.races.index') }}" class="rv-nav-link rv-nav-link--admin">
+                <a href="{{ route('races-admin.races.index') }}" class="rv-nav-link rv-nav-link--admin">
                     관리자
                 </a>
             @endif
@@ -56,7 +56,7 @@
                     </a>
                     <a href="{{ route('profile.edit') }}" class="rv-nav-link">프로필</a>
                     @if(in_array(auth()->user()->role ?? '', ['super_admin', 'region_admin']))
-                        <a href="{{ route('admin.races.index') }}" class="rv-nav-link rv-nav-link--admin">관리자</a>
+                        <a href="{{ route('races-admin.races.index') }}" class="rv-nav-link rv-nav-link--admin">관리자</a>
                     @endif
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf

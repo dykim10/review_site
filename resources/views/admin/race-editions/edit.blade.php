@@ -22,7 +22,7 @@
                 <label class="adm-label">연도 선택</label>
                 <select class="adm-input" style="max-width:220px;" onchange="if (this.value) window.location = this.value;">
                     @foreach($siblingEditions as $sibling)
-                        <option value="{{ route('admin.race-editions.edit', $sibling) }}"
+                        <option value="{{ route('races-admin.race-editions.edit', $sibling) }}"
                             @selected($sibling->id === $edition->id)>
                             {{ $sibling->year }}년
                             @if($sibling->race_date)
@@ -47,7 +47,7 @@
             </p>
         @endif
 
-        <form method="POST" action="{{ route('admin.race-editions.update', $edition) }}" x-data="{ isDomestic: {{ $v('is_domestic', $edition->is_domestic ? '1' : '0') == '1' ? 'true' : 'false' }} }">
+        <form method="POST" action="{{ route('races-admin.race-editions.update', $edition) }}" x-data="{ isDomestic: {{ $v('is_domestic', $edition->is_domestic ? '1' : '0') == '1' ? 'true' : 'false' }} }">
             @csrf @method('PUT')
 
             @include('admin.races.partials.race-master-fields', ['race' => $race])
@@ -174,9 +174,9 @@
             </div>
 
             <div style="display:flex;gap:0.9rem;justify-content:flex-end;margin-top:1.75rem;">
-                <a href="{{ route('admin.race-editions.index') }}" class="adm-btn adm-btn-ghost">목록</a>
+                <a href="{{ route('races-admin.race-editions.index') }}" class="adm-btn adm-btn-ghost">목록</a>
                 @if($race)
-                    <a href="{{ route('admin.races.index', ['q' => $race->name]) }}" class="adm-btn adm-btn-ghost">대회 검색</a>
+                    <a href="{{ route('races-admin.races.index', ['q' => $race->name]) }}" class="adm-btn adm-btn-ghost">대회 검색</a>
                 @endif
                 <button type="submit" class="adm-btn adm-btn-primary">저장</button>
             </div>

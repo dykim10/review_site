@@ -1040,8 +1040,8 @@
                 @if(auth()->user()->role === 'super_admin')
                     <hr class="s-divider">
                     <div class="admin-actions">
-                        <a href="{{ route('admin.races.edit', $race) }}" class="admin-link">수정</a>
-                        <form method="POST" action="{{ route('admin.races.destroy', $race) }}" onsubmit="return confirm('정말 삭제하시겠습니까?')" style="flex:1">
+                        <a href="{{ route('races-admin.races.edit', $race) }}" class="admin-link">수정</a>
+                        <form method="POST" action="{{ route('races-admin.races.destroy', $race) }}" onsubmit="return confirm('정말 삭제하시겠습니까?')" style="flex:1">
                             @csrf @method('DELETE')
                             <button type="submit" class="admin-link admin-del" style="width:100%;cursor:pointer;background:none;font-family:'Pretendard',sans-serif">삭제</button>
                         </form>
