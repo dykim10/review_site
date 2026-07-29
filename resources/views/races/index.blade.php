@@ -329,7 +329,7 @@
                 </p>
                 @auth
                     @if(in_array(auth()->user()->role ?? '', ['super_admin', 'region_admin']))
-                        <a href="{{ route('admin.races.create') }}" class="add-btn">+ 대회 등록</a>
+                        <a href="{{ route('races-admin.races.create') }}" class="add-btn">+ 대회 등록</a>
                     @endif
                 @endauth
             </div>

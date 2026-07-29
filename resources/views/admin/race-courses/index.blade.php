@@ -3,7 +3,7 @@
 @section('page-title', 'GPX 코스 관리')
 
 @section('topbar-action')
-    <a href="{{ route('admin.race-courses.create') }}" class="adm-btn adm-btn-primary">
+    <a href="{{ route('races-admin.race-courses.create') }}" class="adm-btn adm-btn-primary">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         GPX 업로드
     </a>
@@ -37,8 +37,8 @@
                         <td>{{ $course->is_certified ? '✓ 공인' : '-' }}</td>
                         <td class="adm-td-muted">{{ $course->created_at?->format('Y.m.d') }}</td>
                         <td style="text-align:right;">
-                            <a href="{{ route('admin.race-courses.edit', $course) }}" class="adm-link">수정</a>
-                            <form method="POST" action="{{ route('admin.race-courses.destroy', $course) }}" style="display:inline" onsubmit="return confirm('삭제하시겠습니까?')">
+                            <a href="{{ route('races-admin.race-courses.edit', $course) }}" class="adm-link">수정</a>
+                            <form method="POST" action="{{ route('races-admin.race-courses.destroy', $course) }}" style="display:inline" onsubmit="return confirm('삭제하시겠습니까?')">
                                 @csrf @method('DELETE')
                                 <button type="submit" class="adm-btn-danger" style="margin-left:0.6rem;">삭제</button>
                             </form>

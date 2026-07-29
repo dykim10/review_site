@@ -4,7 +4,7 @@
 
 @section('content')
     <div class="adm-form-card">
-        <form method="POST" action="{{ route('admin.race-courses.store') }}" enctype="multipart/form-data">
+        <form method="POST" action="{{ route('races-admin.race-courses.store') }}" enctype="multipart/form-data">
             @csrf
 
             <div class="adm-field">
@@ -61,7 +61,7 @@
             </div>
 
             <div style="display:flex;gap:0.9rem;justify-content:flex-end;margin-top:1.75rem;">
-                <a href="{{ route('admin.race-courses.index') }}" class="adm-btn adm-btn-ghost">취소</a>
+                <a href="{{ route('races-admin.race-courses.index') }}" class="adm-btn adm-btn-ghost">취소</a>
                 <button type="submit" class="adm-btn adm-btn-primary">업로드</button>
             </div>
         </form>
@@ -112,7 +112,7 @@
                     return;
                 }
                 try {
-                    const res = await fetch(`{{ url('/admin/race-editions') }}/${editionId}/entry-categories`, {
+                    const res = await fetch(`{{ url('/races-admin/race-editions') }}/${editionId}/entry-categories`, {
                         headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
                         credentials: 'same-origin',
                     });

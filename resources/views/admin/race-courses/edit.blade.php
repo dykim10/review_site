@@ -21,7 +21,7 @@
             @endif
         </div>
 
-        <form method="POST" action="{{ route('admin.race-courses.update', $course) }}" enctype="multipart/form-data">
+        <form method="POST" action="{{ route('races-admin.race-courses.update', $course) }}" enctype="multipart/form-data">
             @csrf @method('PUT')
 
             <div class="adm-field">
@@ -58,7 +58,7 @@
             </div>
 
             <div style="display:flex;gap:0.9rem;justify-content:flex-end;margin-top:1.75rem;">
-                <a href="{{ route('admin.race-courses.index') }}" class="adm-btn adm-btn-ghost">취소</a>
+                <a href="{{ route('races-admin.race-courses.index') }}" class="adm-btn adm-btn-ghost">취소</a>
                 <button type="submit" class="adm-btn adm-btn-primary">저장</button>
             </div>
         </form>

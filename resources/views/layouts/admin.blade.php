@@ -115,15 +115,15 @@
             <nav class="adm-nav">
                 <div class="adm-nav-group">
                     <div class="adm-nav-label">대회 관리</div>
-                    <a href="{{ route('admin.races.index') }}" class="adm-nav-item {{ request()->routeIs('admin.races.*') ? 'adm-nav-item-active' : '' }}">
+                    <a href="{{ route('races-admin.races.index') }}" class="adm-nav-item {{ request()->routeIs('races-admin.races.*') ? 'adm-nav-item-active' : '' }}">
                         <svg class="adm-nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 21V8l8-5 8 5v13"/><path d="M9 21V12h6v9"/></svg>
                         대회
                     </a>
-                    <a href="{{ route('admin.race-editions.index') }}" class="adm-nav-item {{ request()->routeIs('admin.race-editions.*') ? 'adm-nav-item-active' : '' }}">
+                    <a href="{{ route('races-admin.race-editions.index') }}" class="adm-nav-item {{ request()->routeIs('races-admin.race-editions.*') ? 'adm-nav-item-active' : '' }}">
                         <svg class="adm-nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                         연도별 대회
                     </a>
-                    <a href="{{ route('admin.race-courses.index') }}" class="adm-nav-item {{ request()->routeIs('admin.race-courses.*') ? 'adm-nav-item-active' : '' }}">
+                    <a href="{{ route('races-admin.race-courses.index') }}" class="adm-nav-item {{ request()->routeIs('races-admin.race-courses.*') ? 'adm-nav-item-active' : '' }}">
                         <svg class="adm-nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 20c2-4 4-6 7-6s4 4 7 4 3-3 4-6"/></svg>
                         코스 GPX
                     </a>

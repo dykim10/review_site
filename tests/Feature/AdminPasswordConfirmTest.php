@@ -21,7 +21,7 @@ class AdminPasswordConfirmTest extends TestCase
     {
         $admin = $this->adminUser();
 
-        $response = $this->actingAs($admin)->get('/admin/races');
+        $response = $this->actingAs($admin)->get('/races-admin/races');
 
         $response->assertRedirect(route('admin.password.confirm'));
     }
@@ -44,7 +44,7 @@ class AdminPasswordConfirmTest extends TestCase
             'password' => 'password',
         ]);
 
-        $response->assertRedirect(route('admin.home'));
+        $response->assertRedirect('/admin');
         $this->assertNotNull(session('admin_password_confirmed_at'));
     }
 
@@ -67,7 +67,7 @@ class AdminPasswordConfirmTest extends TestCase
 
         $response = $this->actingAs($admin)
             ->withSession(['admin_password_confirmed_at' => now()->timestamp])
-            ->get('/admin/races');
+            ->get('/races-admin/races');
 
         $response->assertOk();
     }

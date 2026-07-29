@@ -4,7 +4,7 @@
 
 @section('content')
     <div class="adm-form-card">
-        <form method="POST" action="{{ route('admin.races.store') }}" x-data="{ isDomestic: true }">
+        <form method="POST" action="{{ route('races-admin.races.store') }}" x-data="{ isDomestic: true }">
             @csrf
 
             <div style="font-weight:700;font-size:0.95rem;margin-bottom:0.35rem;">대회 카탈로그</div>
@@ -132,7 +132,7 @@
             @include('admin.races.partials.entry-categories', ['edition' => null])
 
             <div style="display:flex;gap:0.9rem;justify-content:flex-end;margin-top:1.75rem;">
-                <a href="{{ route('admin.races.index') }}" class="adm-btn adm-btn-ghost">취소</a>
+                <a href="{{ route('races-admin.races.index') }}" class="adm-btn adm-btn-ghost">취소</a>
                 <button type="submit" class="adm-btn adm-btn-primary">등록</button>
             </div>
         </form>

@@ -5,12 +5,15 @@ namespace App\Models;
 use App\Notifications\ResetPasswordNotification;
 use App\Notifications\VerifyEmailNotification;
 use App\Services\CryptoService;
+use Filament\Models\Contracts\FilamentUser;
+use Filament\Models\Contracts\HasName;
+use Filament\Panel;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-class User extends Authenticatable implements MustVerifyEmail
+class User extends Authenticatable implements MustVerifyEmail, FilamentUser, HasName
 {
     use HasFactory, Notifiable;
 
@@ -50,6 +53,17 @@ class User extends Authenticatable implements MustVerifyEmail
             return $this->attributes['name'];
         }
         return $this->name_enc ? app(CryptoService::class)->decrypt($this->name_enc) : null;
+    }
+
+    public function getFilamentName(): string
+    {
+        return $this->nickname ?? $this->name ?? ('User #'.$this->id);
+    }
+
+    /** REVIEW Filament 1차: super_admin만 */
+    public function canAccessPanel(Panel $panel): bool
+    {
+        return $this->role === 'super_admin';
     }
 
     protected function casts(): array
