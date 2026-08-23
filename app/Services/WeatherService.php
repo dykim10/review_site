@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Race;
 use App\Models\RaceEdition;
 use App\Models\RaceWeather;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -27,11 +28,30 @@ class WeatherService
         return $this->getForEdition($edition);
     }
 
+    public function selectHistoryEditions(Collection $editions, int $years = 5): Collection
+    {
+        return $editions
+            ->filter(fn (RaceEdition $edition) => $edition->race_date && ! $edition->race_date->isFuture())
+            ->sortByDesc('year')
+            ->take($years)
+            ->values();
+    }
+
+    public function getHistoryForEditions(Collection $editions, int $years = 5): Collection
+    {
+        return $this->selectHistoryEditions($editions, $years)
+            ->map(fn (RaceEdition $edition) => [
+                'edition' => $edition,
+                'weather' => $this->getForEdition($edition),
+            ])
+            ->values();
+    }
+
     public function getForEdition(RaceEdition $edition): ?RaceWeather
     {
-        $cached = RaceWeather::where('race_edition_id', $edition->id)->first();
-        if ($cached) {
-            return $cached->temperature !== null ? $cached : null;
+        $cached = $this->cachedWeather($edition);
+        if ($cached !== false) {
+            return $cached;
         }
 
         if (! $edition->race_date || \Carbon\Carbon::parse($edition->race_date)->isFuture()) {
@@ -57,6 +77,20 @@ class WeatherService
         );
 
         return null;
+    }
+
+    /** @return RaceWeather|null|false  false = 캐시 행 없음 */
+    private function cachedWeather(RaceEdition $edition): RaceWeather|null|false
+    {
+        $cached = $edition->relationLoaded('weather')
+            ? $edition->weather
+            : RaceWeather::where('race_edition_id', $edition->id)->first();
+
+        if (! $cached) {
+            return false;
+        }
+
+        return $cached->temperature !== null ? $cached : null;
     }
 
     public function autoResolveStnForEdition(RaceEdition $edition): void

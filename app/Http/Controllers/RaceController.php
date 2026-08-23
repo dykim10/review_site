@@ -98,7 +98,7 @@ class RaceController extends Controller
     private function loadEditions(Race $race)
     {
         return $race->editions()
-            ->with('entryCategories')
+            ->with(['entryCategories', 'weather'])
             ->withCount('reviews')
             ->orderByDesc('year')
             ->get();
@@ -151,8 +151,11 @@ class RaceController extends Controller
             $alreadyReviewed = $myReview !== null;
         }
 
+        $weatherHistory = $this->weatherService->getHistoryForEditions($editions);
         $weather = $latestEdition
-            ? $this->weatherService->getForEdition($latestEdition)
+            ? optional($weatherHistory->first(
+                fn (array $row) => $row['edition']->id === $latestEdition->id
+            ))['weather']
             : null;
 
         $youtubeItems   = [];
@@ -174,7 +177,7 @@ class RaceController extends Controller
 
         return view('races.show', compact(
             'race', 'reviews', 'avgRating', 'alreadyReviewed',
-            'weather', 'editions', 'myReview', 'latestEdition',
+            'weather', 'weatherHistory', 'editions', 'myReview', 'latestEdition',
             'youtubeItems', 'instagramItems', 'feedbacks', 'hasOfficialGpx',
             'coursesForMap', 'hasCourseMap',
             'coursesForElevation', 'hasElevationProfile',
