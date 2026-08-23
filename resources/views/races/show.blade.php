@@ -250,6 +250,10 @@
     .s-heading { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 1.1rem; }
     .s-row { display: flex; justify-content: space-between; align-items: baseline; padding: 0.5rem 0; border-bottom: 1px solid var(--border); }
     .s-row:last-child { border-bottom: none; }
+    .wx-years { margin-top: 0.85rem; padding-top: 0.75rem; border-top: 1px dashed var(--border); display: flex; flex-direction: column; gap: 0.45rem; }
+    .wx-year { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; font-size: 0.78rem; }
+    .wx-year.is-current { font-weight: 700; color: var(--text); }
+    .wx-year-meta { color: var(--muted); font-size: 0.72rem; }
     .s-key { font-size: 0.75rem; color: var(--muted); }
     .s-val { font-size: 0.82rem; color: var(--text2); font-weight: 500; text-align: right; }
     .s-val-accent { color: var(--accent); }
@@ -893,12 +897,16 @@
         {{-- Weather Card --}}
         @php
             $isFutureRace = $latestEdition?->race_date?->isFuture() ?? false;
+            $weatherHistory = $weatherHistory ?? collect();
+            $otherWeatherYears = $weatherHistory->filter(
+                fn ($row) => ! $latestEdition || $row['edition']->id !== $latestEdition->id
+            );
         @endphp
         <div class="s-card">
             <div class="s-heading">대회일 날씨</div>
             @if($isFutureRace)
                 <p style="font-size:0.78rem;color:var(--muted);text-align:center;padding:0.75rem 0;">
-                    🗓 대회 종료 후 표시됩니다
+                    🗓 이번 개최는 대회 종료 후 표시됩니다
                 </p>
             @elseif($weather)
                 <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.9rem;">
@@ -937,10 +945,35 @@
                     @endphp
                     기상청 ASOS · {{ $latestEdition?->race_date?->format('Y.m.d') ?? '-' }} {{ $obsTime }} 기준
                 </p>
-            @else
+            @elseif($weatherHistory->isEmpty())
                 <p style="font-size:0.78rem;color:var(--muted);text-align:center;padding:0.75rem 0;">
                     날씨 데이터를 불러올 수 없습니다
                 </p>
+            @endif
+
+            @if($weatherHistory->isNotEmpty() && ($isFutureRace || $otherWeatherYears->isNotEmpty()))
+                <div class="wx-years">
+                    @foreach($weatherHistory as $row)
+                        @php
+                            $wx = $row['weather'];
+                            $isCurrent = $latestEdition && $row['edition']->id === $latestEdition->id;
+                        @endphp
+                        <div class="wx-year{{ $isCurrent ? ' is-current' : '' }}">
+                            <span>{{ $row['edition']->year }}년</span>
+                            <span class="wx-year-meta">
+                                @if($wx)
+                                    {{ \App\Services\WeatherService::conditionIcon($wx->weather_condition) }}
+                                    {{ $wx->temperature !== null ? number_format($wx->temperature, 1).'°C' : '-' }}
+                                    @if($wx->weather_condition)
+                                        · {{ $wx->weather_condition }}
+                                    @endif
+                                @else
+                                    기록 없음
+                                @endif
+                            </span>
+                        </div>
+                    @endforeach
+                </div>
             @endif
         </div>
 
